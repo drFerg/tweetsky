@@ -1,0 +1,21 @@
+CLIENT:
+The requirements for the client are:
+	- Must allow the user to post tweets
+	- Must allow the user to follow tweets from other users
+	, i.e. create a list of followed users
+	- Must poll the state of the buffer on its corresponding node
+	- If a received message is from someone you follow, it must be displayed by the client
+	- The client must communicate with the mote application via the base station.
+
+
+MOTE APPLICATION:
+	- contain list of adds to follow, updateable at run time
+	- LED actions, blue-fetch, red-forward, green-post
+	- Store 8 * DATA_SIZE, store circular buffer, (onboard flash?)
+	- HEADER contains src/dst, default to ALL
+	- TTL == 0 Drop otherwise --
+	- Post tweet, add user to follow list, retrieve new tweets
+	- retweet, direct message, encrypt, private
+	- Store received tweets if following sender
+	- Host calls get tweet to node to receive new tweets
+	- Host calls to get tweets stored on all following nodes (Directed diffusion routing Chapter 7)
