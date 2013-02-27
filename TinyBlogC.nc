@@ -62,16 +62,18 @@ implementation
   void report_dropped(){}
   
 
-event void LEDTimer1.fired(){
-  call Leds.led2Toggle();
-}
+  event void LEDTimer1.fired(){
+    call Leds.led2Toggle();
+  }
 
-event void LEDTimer0.fired(){
-  call Leds.led0Toggle();
-}
-event void LEDTimer2.fired(){
-  call Leds.led1Toggle();
-}
+  event void LEDTimer0.fired(){
+    call Leds.led0Toggle();
+  }
+  event void LEDTimer2.fired(){
+    call Leds.led1Toggle();
+  }
+
+
 
 
   event void Boot.booted() {
@@ -125,7 +127,11 @@ event void LEDTimer2.fired(){
   void send(tinyblog_t *tweet){
 
   }
-
+  void send_tweets_to_base(){
+    while (call TweetQueue.has_tweets()){
+      TweetQueue.pop_tweet(); /* Send tweet to base station */
+    }
+  }
 
   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
     tinyblog_t *tweet = payload;
@@ -140,9 +146,9 @@ event void LEDTimer2.fired(){
 
     /* Process tweet as it's new! */
     switch(tweet->action){
-      case POST_TWEET: process_new_tweet(tweet); break;
-      case GET_TWEETS: call TweetQueue.get_tweets();             break;
-      case ADD_USER  : add_user_to_follow(tweet);break;
+      case POST_TWEET: process_new_tweet(tweet);     break;
+      case GET_TWEETS: send_tweets_to_base();        break;
+      case ADD_USER  : add_user_to_follow(tweet);    break;
       default:break;
     }
 

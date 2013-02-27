@@ -6,7 +6,7 @@
 
 typedef struct pkt_info{
 	nx_uint8_t seqno;
-	nx_uint8_t srcid;
+	nx_uint16_t srcid;
 }PktInfo;
 
 #endif /* PKT_BUFFER_H */
