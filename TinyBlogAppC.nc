@@ -4,7 +4,7 @@
 configuration TinyBlogAppC { }
 implementation
 {
-  components TinyBlogC, MainC, ActiveMessageC, LedsC,
+  components TinyBlogC, MainC, ActiveMessageC, LedsC, TweetQueueC, PktBufferC,
     new TimerMilliC(), 
     new TimerMilliC() as LEDTimer0,
     new TimerMilliC() as LEDTimer1,
@@ -22,6 +22,8 @@ implementation
   TinyBlogC.LEDTimer2 -> LEDTimer2;
   TinyBlogC.Read -> Sensor;
   TinyBlogC.Leds -> LedsC;
+  TinyBlogC.TweetQueue -> TweetQueueC;
+  TinyBlogC.PktBuffer -> PktBufferC;
 
   
 }

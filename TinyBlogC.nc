@@ -1,8 +1,8 @@
 
 #include "Timer.h"
 #include "TinyBlogMsg.h"
-#include "PktBuffer.h"
 
+#define DEFAULT_INTERVAL 500
 
 module TinyBlogC @safe()
 {
@@ -17,6 +17,8 @@ module TinyBlogC @safe()
     interface Timer<TMilli> as LEDTimer2;
     interface Read<uint16_t>;
     interface Leds;
+    interface TweetQueue;
+    interface PktBuffer;
   }
 }
 implementation
@@ -50,9 +52,9 @@ implementation
   }
 
   // Use LEDs to report various status issues.
-  void report_forward(){pulse_red_led(500)}
-  void report_post_tweet(){pulse_green_led(500)}
-  void report_fetch_tweet(){pulse_blue_led(500)}
+  void report_forward(){pulse_red_led(500);}
+  void report_post_tweet(){pulse_green_led(500);}
+  void report_fetch_tweet(){pulse_blue_led(500);}
 
   void report_problem() { call Leds.led1Toggle(); }
   void report_sent() {}
@@ -87,40 +89,70 @@ event void LEDTimer2.fired(){
 
   event void RadioControl.stopDone(error_t error) {}
 
-
-  int should_drop(tinyblog_t *omsg){
-    if (check(omsg)){
-      dbg("Seen packet already");
-      return 1;
-    }
-    else if (omsg->dstid == TOS_NODE_ID){
-      dbg("This is my packet, thank you");
-      return 1;
-    }
-    else if (omsg->ttl == 0){
+  int tweet_for_me(tinyblog_t *tweet){
+     if (tweet->destMoteID == TOS_NODE_ID){
+        dbg("This is my packet, thank you");
+        return 1;
+    } else return 0;
+  }
+  int tweet_expired(tinyblog_t *tweet){
+    if (tweet->hopCount == 0){
       dbg("Oh noes, packet's time to die");
       return 1;
+    } else return 0;
+  }
+
+  int tweet_seen(tinyblog_t *tweet){
+    if (call PktBuffer.check(tweet)){
+      dbg("Seen packet already");
+      return 1;
+    } else return 0;
+  }
+
+  void add_to_seen(tinyblog_t *tweet){
+    call PktBuffer.push(tweet);
+  }
+  int am_following(tinyblog_t *tweet){
+    return 1;
+  }
+  void add_user_to_follow(tinyblog_t *tweet){}
+  void process_new_tweet(tinyblog_t *tweet){
+    if (am_following(tweet)){
+      //add_to_new_tweets(tweet);
     }
-    else
-        return 0;
+  }
+
+  void send(tinyblog_t *tweet){
+
   }
 
 
   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
-    tinyblog_t *omsg = payload;
-
+    tinyblog_t *tweet = payload;
     report_received();
-    if (should_drop(omsg)){
+
+    /* Check if tweet is new, drop old tweets, stop broadcast storm */
+    if (tweet_seen(tweet)){
       report_dropped();
       return msg;
+    } 
+    else add_to_seen(tweet);
+
+    /* Process tweet as it's new! */
+    switch(tweet->action){
+      case POST_TWEET: process_new_tweet(tweet); break;
+      case GET_TWEETS: call TweetQueue.get_tweets();             break;
+      case ADD_USER  : add_user_to_follow(tweet);break;
+      default:break;
     }
-    else if (!sendBusy){
-      omsg->ttl--;
-      if (call AMSend.send(AM_BROADCAST_ADDR, msg, sizeof local) == SUCCESS){
-        sendBusy = TRUE;
-      }
-      else report_problem();
-    }
+
+    
+
+    /* Tweet processed, check if end of line */
+    if (tweet_expired(tweet)){
+      report_dropped();
+      return msg;
+    } else send(tweet);
 
     return msg;
   }
@@ -146,10 +178,9 @@ event void LEDTimer2.fired(){
   }
 
   event void Read.readDone(error_t result, uint16_t data) {
-    if (result != SUCCESS)
-      {
-	data = 0xffff;
-	report_problem();
+    if (result != SUCCESS){
+	       data = 0xffff;
+	       report_problem();
       }
     }
 }
