@@ -1,0 +1,22 @@
+GEN=TinyBlogMsg.java Constants.java
+
+all: tinyblogclient.jar
+
+tinyblogclient.jar: TinyBlogClient.class
+	jar cf $@ *.class
+
+TinyBlogMsg.java: ../TinyBlogMsg.h
+	mig -target=null -java-classname=TinyBlogMsg java ../TinyBlogMsg.h TinyBlogMsg -o $@
+
+Constants.java: ../TinyBlogMsg.h
+	ncg -target=null -java-classname=Constants java ../TinyBlogMsg.h DATA_SIZE POST_TWEET ADD_USER GET_TWEETS -o $@
+
+
+TinyBlogClient.class: $(wildcard *.java) $(GEN)
+	javac *.java
+
+clean:
+	rm -f *.class $(GEN)
+
+veryclean: clean
+	rm tinyblogclient.jar
