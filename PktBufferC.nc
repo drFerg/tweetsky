@@ -19,7 +19,7 @@ implementation{
 	}
 
 	command void PktBuffer.pop(){
-		out = (out - 1) % BUFFSIZE;
+		out = (out + 1) % BUFFSIZE;
 	}
 
 	command int PktBuffer.check(tinyblog_t *pkt){

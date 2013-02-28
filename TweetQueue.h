@@ -7,6 +7,7 @@ typedef struct tweet {
 	nx_uint8_t msg[DATA_SIZE];
 	nx_uint8_t nchars;
 	nx_uint32_t mood;
+	nx_uint8_t seqno;
 	
 }Tweet;
 

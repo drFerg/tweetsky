@@ -3,8 +3,9 @@
 #include "Timer.h"
 #include "TinyBlogMsg.h"
 #include "printf.h"
+#include "TweetQueue.h"
 
-#define DEFAULT_INTERVAL 5000
+#define DEFAULT_INTERVAL 2500
 
 module TinyBlogC @safe()
 {
@@ -29,8 +30,8 @@ implementation
   bool sendBusy;
   message_t am_pkt;
   tinyblog_t local;
+  
 
-  int seqno = 0;
 
   
 
@@ -83,8 +84,8 @@ void add_user_to_follow(int user){
 
 
   event void Boot.booted() {
-    if (call RadioControl.start() != SUCCESS)
-      report_problem();
+    if (call RadioControl.start() != SUCCESS) report_problem();
+    local.seqno = 0;
     add_user_to_follow(3);
   }
 
@@ -100,34 +101,37 @@ void add_user_to_follow(int user){
 
   int tweet_for_me(tinyblog_t *tweet){
      if (tweet->destMoteID == TOS_NODE_ID){
-        dbg("This is my packet, thank you");
+        printf("ID: %d, Dead tweet\n",TOS_NODE_ID);
         return 1;
     } else return 0;
   }
   int tweet_expired(tinyblog_t *tweet){
     if (tweet->hopCount == 0){
+
       dbg("Oh noes, packet's time to die");
       return 1;
     } else return 0;
   }
 
-  int tweet_seen(tinyblog_t *tweet){
+  bool tweet_seen(tinyblog_t *tweet){
     if (call PktBuffer.check(tweet)){
+
       dbg("Seen packet already");
-      return 1;
-    } else return 0;
+      return TRUE;
+    } else return FALSE;
   }
 
   void add_to_seen(tinyblog_t *tweet){
+    printf("ID: %d, adding to blklist\n",TOS_NODE_ID);
     call PktBuffer.push(tweet);
   }
   bool am_following(tinyblog_t *tweet){
-    printf("ID: %d, Tweet from %d\n",TOS_NODE_ID, tweet->sourceMoteID);
     return call FollowList.check(tweet->sourceMoteID);
   }
   
   void process_new_tweet(tinyblog_t *tweet){
     printf("ID: %d, Processing Tweet\n",TOS_NODE_ID);
+    printf("ID: %d, Tweet from %d, seqno %d\n",TOS_NODE_ID, tweet->sourceMoteID, tweet->seqno);
     if (am_following(tweet)){
      call TweetQueue.add_tweet(tweet);
      printf("ID: %d, Saving Tweet(following id)\n",TOS_NODE_ID);
@@ -137,7 +141,7 @@ void add_user_to_follow(int user){
 
   void send(tinyblog_t *tweet){
     tinyblog_t * payload = (tinyblog_t *) (call AMSend.getPayload(&am_pkt, sizeof(tinyblog_t)));
-    memcpy(payload, tweet, sizeof(tweet));
+    memcpy(payload, tweet, sizeof(tinyblog_t));
     if (call AMSend.send(AM_BROADCAST_ADDR, &am_pkt, sizeof(tinyblog_t)) == SUCCESS)
         sendBusy = TRUE;
     if (!sendBusy)
@@ -145,8 +149,11 @@ void add_user_to_follow(int user){
     printf("ID: %d, Tweet Forwarded\n----------\n",TOS_NODE_ID);printfflush();
   }
   void send_tweets_to_base(){
+    Tweet *tweet;
     while (call TweetQueue.has_tweets()){
-      call TweetQueue.pop_tweet(); /* Send tweet to base station */
+      tweet = call TweetQueue.pop_tweet(); /* Send tweet to base station */
+      printf("ID: %d, %s, src %d, seqno %d\n",TOS_NODE_ID, (char *)(tweet->msg), tweet->sourceMoteID, tweet->seqno);
+      printfflush();
     }
   }
 
@@ -193,7 +200,7 @@ void add_user_to_follow(int user){
       strcpy((char *)tweet->data,"Hello, world!");
       tweet->mood = 0;
       add_to_seen(tweet);
-
+      printf("ID: %d, Built tweet, %d\n",TOS_NODE_ID, tweet->seqno-1);
 	    if (call AMSend.send(AM_BROADCAST_ADDR, &am_pkt, sizeof(tinyblog_t)) == SUCCESS)
 	      sendBusy = TRUE;
 	  }
@@ -201,6 +208,7 @@ void add_user_to_follow(int user){
 
 	  if (!sendBusy)
       report_problem();
+    send_tweets_to_base();
   }
 
   event void AMSend.sendDone(message_t* msg, error_t error) {

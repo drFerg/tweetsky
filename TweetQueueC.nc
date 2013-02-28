@@ -15,10 +15,11 @@ implementation{
 		tweetStore[in].nchars = tweet->nchars;
 		tweetStore[in].sourceMoteID = tweet->sourceMoteID;
 		tweetStore[in].mood = tweet->mood;
+		tweetStore[in].seqno = tweet->seqno;
 		in = (in + 1) % QSIZE;
 	}
-	command Tweet TweetQueue.pop_tweet(){
-		Tweet t = tweetStore[out];
+	command Tweet * TweetQueue.pop_tweet(){
+		Tweet *t = &tweetStore[out];
 		out = (out + 1) % QSIZE;
 		return t;
 	}
