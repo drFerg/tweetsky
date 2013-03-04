@@ -1,60 +1,68 @@
-/*
- * Copyright (c) 2006 Intel Corporation
- * All rights reserved.
- *
- * This file is distributed under the terms in the attached INTEL-LICENSE     
- * file. If you do not find these files, copies can be found by writing to
- * Intel Research Berkeley, 2150 Shattuck Avenue, Suite 1300, Berkeley, CA, 
- * 94704.  Attention:  Intel License Inquiry.
- */
-
 import net.tinyos.message.*;
 import net.tinyos.util.*;
 import java.io.*;
+import java.util.Scanner;
 
-/* The "Oscilloscope" demo app. Displays graphs showing data received from
-   the Oscilloscope mote application, and allows the user to:
-   - zoom in or out on the X axis
-   - set the scale on the Y axis
-   - change the sampling period
-   - change the color of each mote's graph
-   - clear all data
 
-   This application is in three parts:
-   - the Node and Data objects store data received from the motes and support
-     simple queries
-   - the Window and Graph and miscellaneous support objects implement the
-     GUI and graph drawing
-   - the Oscilloscope object talks to the motes and coordinates the other
-     objects
-
-   Synchronization is handled through the Oscilloscope object. Any operation
-   that reads or writes the mote data must be synchronized on Oscilloscope.
-   Note that the messageReceived method below is synchronized, so no further
-   synchronization is needed when updating state based on received messages.
-*/
 public class TinyBlogClient implements MessageListener
 {
     MoteIF mote;
+    int MOTEID = 5;
+    short seqno = 0;
 
+    private void cli(){
+        Scanner input = new Scanner(System.in);
+        String command = input.next();
+        while (!command.equals("quit")){
+            if (command.equals("tweet")){
+                tweet(input.nextLine().trim());
+            }
+            command = input.next();
+        }
+    }
 
     /* Main entry point */
     void run() {
-
         mote = new MoteIF(PrintStreamMessenger.err);
         mote.registerListener(new TinyBlogMsg(), this);
-        System.out.println("hello world");
+        cli();
     }
 
-    /* The data object has informed us that nodeId is a previously unknown
-       mote. Update the GUI. */
+    short[] convertStringToShort(String s){
+        short [] text = new short[s.length()];
+        for (int i = 0; i < s.length(); i++){
+            text[i] = (new Integer(s.charAt(i))).shortValue();
+        }
+        return text;
+    }
+
+    String convertShortToString(short[] s){
+        String text = "";
+        for (int i = 0; i < s.length; i++){
+            text += (char)s[i];
+        }
+        return text;
+    }
+    void tweet(String text){
+        short[] data = convertStringToShort(text);
+        short len = (short)data.length;
+
+
+        System.out.println("Sending tweet...");
+        TinyBlogMsg msg = new TinyBlogMsg();
+        msg.set_action((short)1);
+        msg.set_data(data);
+        msg.set_nchars(len);
+        System.out.println(text);
+        sendMsg(msg);
+    }
 
 
     public synchronized void messageReceived(int dest_addr, 
             Message msg) {
     if (msg instanceof TinyBlogMsg) {
         TinyBlogMsg tbmsg = (TinyBlogMsg)msg;
-        System.out.println(tbmsg.get_sourceMoteID());
+        if (tbmsg.get_sourceMoteID() != MOTEID)return;
         /* Update interval and mote data */
         
         /* Inform the GUI that new data showed up */
@@ -66,13 +74,13 @@ public class TinyBlogClient implements MessageListener
        true */
 
     /* Broadcast a version+interval message. */
-    void sendMsg() {
-        TinyBlogMsg tbmsg = new TinyBlogMsg();
+    void sendMsg(TinyBlogMsg msg) {
 
-        tbmsg.set_sourceMoteID(0);
-        tbmsg.set_destMoteID(3);
+        msg.set_sourceMoteID(3);
+        msg.set_destMoteID(MOTEID);
+        msg.set_seqno(seqno++);
         try {
-            mote.send(MoteIF.TOS_BCAST_ADDR, tbmsg);
+            mote.send(MOTEID, msg);
         }
         catch (IOException e) {
             //System.err.out("Cannot send message to mote");

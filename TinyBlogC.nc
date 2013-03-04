@@ -140,10 +140,6 @@ implementation
 
 
 /***********EVENTS********************************************/
-
-
-
-
     event void Boot.booted() {
         if (call RadioControl.start() != SUCCESS) report_problem();
         local.seqno = 0;
@@ -151,7 +147,7 @@ implementation
     }
 /*-----------Radio & AM EVENTS------------------------------- */
     event void RadioControl.startDone(error_t error) {
-        startTimer();
+        //startTimer();
     }
 
     event void RadioControl.stopDone(error_t error) {}
@@ -167,6 +163,10 @@ implementation
             return msg;
         } else {
             add_to_seen(tweet);
+
+        if (tweet_for_me(tweet) && tweet->action == POST_TWEET){
+            printf("New tweet to send: %s\n",(char *)tweet->data);
+        }
 
         /* Process tweet as it's new! */
             switch(tweet->action){
