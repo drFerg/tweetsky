@@ -6,19 +6,35 @@ import java.util.Scanner;
 
 public class TinyBlogClient implements MessageListener
 {
+    short POST_TWEET = 1;
+    short ADD_USER   = 2;
+    short GET_TWEETS = 3;
+    short RETURN_TWEETS = 4;
+    short BROADCAST_TWEET = 5;
+
     MoteIF mote;
     int MOTEID = 5;
-    short seqno = 0;
+    short seqno = 110;
 
     private void cli(){
         Scanner input = new Scanner(System.in);
+        System.out.print(">>");
         String command = input.next();
         while (!command.equals("quit")){
             if (command.equals("tweet")){
                 tweet(input.nextLine().trim());
             }
+            else if (command.equals("get")){
+                getTweets();
+            }
+            else if (command.equals("follow")){
+                followUser(input.nextInt());
+            }
+            System.out.print(">>");
             command = input.next();
         }
+        input.close();
+        System.exit(0);
     }
 
     /* Main entry point */
@@ -36,36 +52,56 @@ public class TinyBlogClient implements MessageListener
         return text;
     }
 
-    String convertShortToString(short[] s){
+    String convertShortToString(short[] s, short len){
         String text = "";
-        for (int i = 0; i < s.length; i++){
+        for (short i = 0; i < len; i++){
             text += (char)s[i];
         }
         return text;
     }
-    void tweet(String text){
-        short[] data = convertStringToShort(text);
-        short len = (short)data.length;
 
-
-        System.out.println("Sending tweet...");
+    void followUser(int user){
+        short[]data  = new short[1];
+        data[0] = (short)user;
+        System.out.println("Following user ID: " + user);
         TinyBlogMsg msg = new TinyBlogMsg();
-        msg.set_action((short)1);
+        msg.set_action(ADD_USER);
         msg.set_data(data);
-        msg.set_nchars(len);
-        System.out.println(text);
         sendMsg(msg);
     }
 
-
-    public synchronized void messageReceived(int dest_addr, 
-            Message msg) {
-    if (msg instanceof TinyBlogMsg) {
-        TinyBlogMsg tbmsg = (TinyBlogMsg)msg;
-        if (tbmsg.get_sourceMoteID() != MOTEID)return;
-        /* Update interval and mote data */
+    void getTweets(){
+        System.out.println("Getting tweets...");
+        TinyBlogMsg msg = new TinyBlogMsg();
+        msg.set_action(GET_TWEETS);
+        msg.set_nchars((short)0);
+        sendMsg(msg);
+    }
+    void tweet(String text){
+        System.out.println("Tweet: " + text);
+        System.out.print("Sending tweet...");
+        short[] data = convertStringToShort(text);
+        short len = (short)data.length;
+        TinyBlogMsg msg = new TinyBlogMsg();
+        msg.set_action(POST_TWEET);
+        msg.set_data(data);
+        msg.set_nchars(len);
         
-        /* Inform the GUI that new data showed up */
+        sendMsg(msg);
+        System.out.println("sent!");
+    }
+
+
+    public synchronized void messageReceived(int dest_addr, Message msg) {
+        if (msg instanceof TinyBlogMsg) {
+            TinyBlogMsg tbmsg = (TinyBlogMsg)msg;
+            if (tbmsg.get_sourceMoteID() != MOTEID)
+                return;
+            int action = tbmsg.get_action();
+            if (action == RETURN_TWEETS){
+                System.out.println(convertShortToString(tbmsg.get_data(),tbmsg.get_nchars()));
+
+            }
         }
     }
 
@@ -79,6 +115,7 @@ public class TinyBlogClient implements MessageListener
         msg.set_sourceMoteID(3);
         msg.set_destMoteID(MOTEID);
         msg.set_seqno(seqno++);
+        msg.set_hopCount((short)6);
         try {
             mote.send(MOTEID, msg);
         }

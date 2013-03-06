@@ -68,6 +68,8 @@ implementation
     void add_user_to_follow(int user){
         //CHANGE TO DATA FIELD using bit manips
         call FollowList.push(user);
+        printf("Added user: %d\n", user);
+        printfflush();
     }
 
 
@@ -127,7 +129,7 @@ implementation
             sendBusy = TRUE;
         if (!sendBusy)
             report_problem();
-        printf("ID: %d, Tweet Forwarded\n----------\n",TOS_NODE_ID);printfflush();
+        printf("ID: %d, Tweet sent\n----------\n",TOS_NODE_ID);printfflush();
     }
     void send_tweets_to_base(){
         Tweet *tweet;
@@ -136,6 +138,13 @@ implementation
             printf("ID: %d, %s, src %d, seqno %d\n",TOS_NODE_ID, (char *)(tweet->msg), tweet->sourceMoteID, tweet->seqno);
             printfflush();
         }
+    }
+
+    void send_my_tweet(tinyblog_t *tweet){
+        //ADD SENSOR READING
+        tweet->sourceMoteID = TOS_NODE_ID;
+        tweet->destMoteID = 0;
+        send(tweet);
     }
 
 
@@ -155,6 +164,7 @@ implementation
 /*-----------Received packet event, main state event ------------------------------- */
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
         tinyblog_t *tweet = payload;
+        bool myTweet = tweet_for_me(tweet);
         report_received();
 
     /* Check if tweet is new, drop old tweets, stop broadcast storm */
@@ -164,20 +174,16 @@ implementation
         } else {
             add_to_seen(tweet);
 
-        if (tweet_for_me(tweet) && tweet->action == POST_TWEET){
-            printf("New tweet to send: %s\n",(char *)tweet->data);
-        }
-
         /* Process tweet as it's new! */
             switch(tweet->action){
-                case POST_TWEET: process_new_tweet(tweet);     break;
+                case POST_TWEET: (myTweet?send_my_tweet(tweet):process_new_tweet(tweet));break;
                 case GET_TWEETS: send_tweets_to_base();        break;
                 case ADD_USER  : add_user_to_follow(tweet->destMoteID);    break;
                 default:break;
             }
 
         /* Tweet processed, check if end of line and forward */
-            if (tweet_expired(tweet)){
+            if (tweet_expired(tweet) || myTweet){
                 report_dropped();
             } else {
                 send(tweet);

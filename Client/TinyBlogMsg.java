@@ -79,7 +79,7 @@ public class TinyBlogMsg extends net.tinyos.message.Message {
     }
 
     /**
-    * Return a String representation of this message. Includes the
+    /* Return a String representation of this message. Includes the
      * message type name and the non-indexed field values.
      */
     public String toString() {
