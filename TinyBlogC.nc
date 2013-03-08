@@ -4,8 +4,8 @@
 #include "TinyBlogMsg.h"
 #include "printf.h"
 #include "TweetQueue.h"
-#define NEW_PRINTF_SEMANTICS
 
+#define BASE 0
 #define DEFAULT_INTERVAL 2500
 
 module TinyBlogC @safe()
@@ -30,7 +30,8 @@ module TinyBlogC @safe()
 }
 implementation
 {
-    bool sendBusy;
+    bool sendBusy = FALSE;
+    bool moreTweets = FALSE;
     message_t am_pkt;
     tinyblog_t local;
     nx_uint8_t temp;
@@ -62,19 +63,19 @@ implementation
 
     void report_problem() { call Leds.led1Toggle(); }
     void report_sent() {pulse_green_led(100);}
-    void report_received() {printf("----------\nID: %d, Received tweet\n",TOS_NODE_ID);printfflush();pulse_red_led(100);pulse_blue_led(100);}
+    void report_received() {printf("ID: %d, Received tweet\n",TOS_NODE_ID);printfflush();pulse_red_led(100);pulse_blue_led(100);}
     void report_dropped(){printf("ID: %d, Dropped tweet\n----------\n",TOS_NODE_ID);printfflush();pulse_red_led(250);}
       
 /*------------------------------------------------- */
 
-    void send(tinyblog_t *tbmsg){
+    void send(tinyblog_t *tbmsg, int dest){
         tinyblog_t * payload = (tinyblog_t *) (call AMSend.getPayload(&am_pkt, sizeof(tinyblog_t)));
         memcpy(payload, tbmsg, sizeof(tinyblog_t));
-        if (call AMSend.send(AM_BROADCAST_ADDR, &am_pkt, sizeof(tinyblog_t)) == SUCCESS)
+        if (call AMSend.send(dest, &am_pkt, sizeof(tinyblog_t)) == SUCCESS)
             sendBusy = TRUE;
         if (!sendBusy)
             report_problem();
-        printf("ID: %d, Tweet sent\n----------\n",TOS_NODE_ID);printfflush();
+        printf("ID: %d, Tweet sent\n",TOS_NODE_ID);printfflush();
     }
 /*----------------------------------------------------*/
 
@@ -91,11 +92,13 @@ implementation
     }
     void getMood(tinyblog_t *tbmsg){
         tbmsg->mood = (light<<16) + temp;
+        printf("%d, %d, %d\n", light, temp, tbmsg->mood);printfflush();
+
     }
   
     bool tweet_for_me(tinyblog_t *tbmsg){
         if (tbmsg->destMoteID == TOS_NODE_ID){
-            printf("ID: %d, My tweet\n",TOS_NODE_ID);
+            printf("ID: %d, Tweet for me\n",TOS_NODE_ID);
             return TRUE;
         } else return FALSE;
     }
@@ -138,17 +141,30 @@ implementation
         //ADD SENSOR READING
         tbmsg->sourceMoteID = TOS_NODE_ID;
         tbmsg->destMoteID = 0;
-        send(tbmsg);
+        getMood(tbmsg);
     }
 
 
     void send_tweets_to_base(){
         Tweet *tweet;
-        while (call TweetQueue.has_tweets()){
+        if (call TweetQueue.has_tweets()){
             tweet = call TweetQueue.pop_tweet(); /* Send tweet to base station */
-
-            printf("ID: %d, %s, src %d, seqno %d\n", TOS_NODE_ID, (char *)(tweet->msg), tweet->sourceMoteID, tweet->seqno);
+            local.seqno = tweet->seqno;
+            local.sourceMoteID = tweet->sourceMoteID;
+            local.destMoteID = BASE;
+            local.action = RETURN_TWEETS;
+            local.hopCount = 6; //D of Web
+            local.nchars = tweet->nchars;
+            local.mood = tweet->mood;
+            memcpy((char *)&(local.data), tweet->msg, tweet->nchars);
+            send(&local, BASE);
+            printf("Forwarding to base\n");
             printfflush();
+
+            if (call TweetQueue.has_tweets())
+                moreTweets = TRUE;
+             else 
+                moreTweets = FALSE;
         }
     }
 
@@ -170,34 +186,38 @@ implementation
 
 /*-----------Received packet event, main state event ------------------------------- */
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
-        tinyblog_t *tweet = payload;
-        bool myTweet = tweet_for_me(tweet);
+        tinyblog_t *tweet = (tinyblog_t *) payload;
+        bool myTweet;
         report_received();
+        myTweet =  tweet_for_me(tweet);
+        
 
     /* Check if tweet is new, drop old tweets, stop broadcast storm */
         if (tweet_seen(tweet)){
             report_dropped();
             return msg;
-        } else {
-            add_to_seen(tweet);
-
-        /* Process tweet as it's new! */
-            switch(tweet->action){
-                case POST_TWEET: (myTweet?send_my_tweet(tweet):process_new_tweet(tweet));break;
-                case GET_TWEETS: send_tweets_to_base(); break;
-                case ADD_USER  : add_user_to_follow(tweet->destMoteID); break;
-                default:break;
-            }
-
-        /* Tweet processed, check if end of line and forward */
-            if (tweet_expired(tweet) || myTweet){
-                report_dropped();
-            } else {
-                send(tweet);
-            }
-
-            return msg; /* Return packet to TinyOS */
         }
+
+    /* Process tweet as it's new! */
+        switch(tweet->action){
+            case POST_TWEET: (myTweet?send_my_tweet(tweet):process_new_tweet(tweet));break;
+            case GET_TWEETS: send_tweets_to_base(); break;
+            case ADD_USER  : add_user_to_follow(tweet->destMoteID); return msg;
+            default:break;
+        }
+
+    /* Tweet processed, check if end of line and forward */
+        
+        if (tweet_expired(tweet)){
+            report_dropped();
+        } else {
+            send(tweet, AM_BROADCAST_ADDR);
+            add_to_seen(tweet);
+        }
+        
+         printf("----------\n");printfflush();
+        return msg; /* Return packet to TinyOS */
+        
     }
 
     event void AMSend.sendDone(message_t* msg, error_t error) {
@@ -207,6 +227,9 @@ implementation
             report_problem();
 
         sendBusy = FALSE;
+        if (moreTweets){
+            send_tweets_to_base();
+        }
     }
 
     event void Timer.fired() {

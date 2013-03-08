@@ -14,7 +14,7 @@ public class TinyBlogClient implements MessageListener
 
     MoteIF mote;
     int MOTEID = 5;
-    short seqno = 110;
+    short seqno = 0;
 
     private void cli(){
         Scanner input = new Scanner(System.in);
@@ -29,6 +29,9 @@ public class TinyBlogClient implements MessageListener
             }
             else if (command.equals("follow")){
                 followUser(input.nextInt());
+            } 
+            else if (command.equals("connect")){
+                MOTEID = input.nextInt();
             }
             System.out.print(">>");
             command = input.next();
@@ -63,7 +66,7 @@ public class TinyBlogClient implements MessageListener
     void followUser(int user){
         short[]data  = new short[1];
         data[0] = (short)user;
-        System.out.println("Following user ID: " + user);
+        System.out.printf("Node %d: Following user ID: %d\n", MOTEID, user);
         TinyBlogMsg msg = new TinyBlogMsg();
         msg.set_action(ADD_USER);
         msg.set_data(data);
@@ -71,22 +74,25 @@ public class TinyBlogClient implements MessageListener
     }
 
     void getTweets(){
-        System.out.println("Getting tweets...");
+        System.out.printf("Node %d: Getting tweets...\n",MOTEID);
         TinyBlogMsg msg = new TinyBlogMsg();
         msg.set_action(GET_TWEETS);
         msg.set_nchars((short)0);
         sendMsg(msg);
     }
     void tweet(String text){
+        if (text.length() >14){
+            System.out.println("Tweet to long, needs to be < 15 chars");
+            return;
+        }
         System.out.println("Tweet: " + text);
-        System.out.print("Sending tweet...");
+        System.out.printf("Node %d: Sending tweet...", MOTEID);
         short[] data = convertStringToShort(text);
         short len = (short)data.length;
         TinyBlogMsg msg = new TinyBlogMsg();
         msg.set_action(POST_TWEET);
         msg.set_data(data);
         msg.set_nchars(len);
-        
         sendMsg(msg);
         System.out.println("sent!");
     }
@@ -95,14 +101,15 @@ public class TinyBlogClient implements MessageListener
     public synchronized void messageReceived(int dest_addr, Message msg) {
         if (msg instanceof TinyBlogMsg) {
             TinyBlogMsg tbmsg = (TinyBlogMsg)msg;
-            if (tbmsg.get_sourceMoteID() != MOTEID)
-                return;
-            int action = tbmsg.get_action();
-            if (action == RETURN_TWEETS){
-                System.out.println(convertShortToString(tbmsg.get_data(),tbmsg.get_nchars()));
-
+            if (tbmsg.get_action() == RETURN_TWEETS){
+                System.out.println();
+                System.out.printf("Node %d tweeted: %s\nMood = %d\n", tbmsg.get_sourceMoteID(), 
+                    convertShortToString(tbmsg.get_data(),tbmsg.get_nchars()), tbmsg.get_mood());
+            } else if (tbmsg.get_sourceMoteID() != MOTEID ){
+                System.out.println("Received a msg");
             }
         }
+        System.out.println(">>");
     }
 
     /* The user wants to set the interval to newPeriod. Refuse bogus values
@@ -112,7 +119,7 @@ public class TinyBlogClient implements MessageListener
     /* Broadcast a version+interval message. */
     void sendMsg(TinyBlogMsg msg) {
 
-        msg.set_sourceMoteID(3);
+        msg.set_sourceMoteID(0);
         msg.set_destMoteID(MOTEID);
         msg.set_seqno(seqno++);
         msg.set_hopCount((short)6);
