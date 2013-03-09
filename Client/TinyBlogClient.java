@@ -4,11 +4,13 @@ import java.io.*;
 import java.util.Scanner;
 
 
+
 public class TinyBlogClient implements MessageListener
 {
-    short POST_TWEET = 1;
-    short ADD_USER   = 2;
-    short GET_TWEETS = 3;
+    short POST_TWEET = Constants.POST_TWEET;
+    short ADD_USER   = Constants.ADD_USER;
+    short GET_TWEETS = Constants.GET_TWEETS;
+
     short RETURN_TWEETS = 4;
     short BROADCAST_TWEET = 5;
 
@@ -32,6 +34,13 @@ public class TinyBlogClient implements MessageListener
             } 
             else if (command.equals("connect")){
                 MOTEID = input.nextInt();
+            }
+            else if (command.equals("help")){
+                System.out.println("Help:\n" +
+                                   "tweet <message>\n" + 
+                                   "get\t(gets followed tweets)\n" +
+                                   "follow <id>\n" +
+                                   "connect <id> (sets tweet node)");          
             }
             System.out.print(">>");
             command = input.next();
@@ -109,7 +118,7 @@ public class TinyBlogClient implements MessageListener
                 System.out.println("Received a msg");
             }
         }
-        System.out.println(">>");
+        System.out.print(">>");
     }
 
     /* The user wants to set the interval to newPeriod. Refuse bogus values

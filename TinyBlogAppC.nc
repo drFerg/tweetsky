@@ -4,8 +4,11 @@
 configuration TinyBlogAppC { }
 implementation
 {
-    components TinyBlogC, MainC, ActiveMessageC, LedsC, TweetQueueC, PktBufferC, CircularQC,
-        PrintfC, SerialStartC,
+    components TinyBlogC, MainC, ActiveMessageC, LedsC, PrintfC, SerialStartC,
+        TweetQueueC, 
+        PktBufferC, 
+        CircularQC,
+
         new TimerMilliC(), 
         new TimerMilliC() as MTimer,
         new TimerMilliC() as LEDTimer0,
@@ -14,7 +17,9 @@ implementation
         new HamamatsuS10871TsrC() as LSensor,
         new SensirionSht11C() as TSensor,
         new AMSenderC(AM_TINYBLOGMSG), new AMReceiverC(AM_TINYBLOGMSG);
-
+        #if SCEN==2 
+        components InterestTableC, new TimerMilliC() as InterestTimer;
+        #endif
     TinyBlogC.Boot -> MainC;
     TinyBlogC.RadioControl -> ActiveMessageC;
     TinyBlogC.AMSend -> AMSenderC;
@@ -30,6 +35,10 @@ implementation
     TinyBlogC.TweetQueue -> TweetQueueC;
     TinyBlogC.PktBuffer -> PktBufferC;
     TinyBlogC.FollowList -> CircularQC;
+    #if SCEN==2
+    TinyBlogC.InterestCache -> InterestTableC;
+    TinyBlogC.InterestTimer -> InterestTimer;
+    #endif
 
   
 }

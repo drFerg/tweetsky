@@ -42,7 +42,7 @@ enum {
   ADD_USER = 2,
   GET_TWEETS = 3,
   RETURN_TWEETS = 4,
-  
+  DIRECT_MESSAGE = 5,
 };
 
 #endif
