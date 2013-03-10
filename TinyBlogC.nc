@@ -2,12 +2,20 @@
 #include <stdlib.h>
 #include "Timer.h"
 #include "TinyBlogMsg.h"
-#include "printf.h"
+
 #include "TweetQueue.h"
 
 #define BASE 0
 #define DEFAULT_INTERVAL 2500
 
+#if DEBUG
+#include "printf.h"
+#define PRINTF(...) printf(__VA_ARGS__)
+#define PRINTFFLUSH(...) printfflush()
+#else
+#define PRINTF(...)
+#define PRINTFFLUSH(...)
+#endif
 
 module TinyBlogC @safe()
 {
@@ -37,6 +45,9 @@ implementation
 {
     bool sendBusy = FALSE;
     bool moreTweets = FALSE;
+    #ifdef SCEN==2
+    bool moreFollowees = FALSE;
+    #endif
     message_t am_pkt;
     tinyblog_t local;
     nx_uint8_t temp;
@@ -63,25 +74,24 @@ implementation
 /*-----------Reports------------------------------- */
   // Use LEDs to report various status issues.
     void report_forward(){pulse_red_led(500);}
-    void report_post_tweet(){printf("ID: %d, Posted tweet\n",TOS_NODE_ID);printfflush();pulse_green_led(500);}
-    void report_fetch_tweet(){printf("ID: %d, Fetched tweet\n",TOS_NODE_ID);printfflush();pulse_blue_led(500);}
+    void report_post_tweet(){PRINTF("ID: %d, Posted tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_green_led(500);}
+    void report_fetch_tweet(){PRINTF("ID: %d, Fetched tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_blue_led(500);}
 
     void report_problem() { call Leds.led1Toggle(); }
     void report_sent() {pulse_green_led(100);}
-    void report_received() {printf("ID: %d, Received tweet\n",TOS_NODE_ID);printfflush();pulse_red_led(100);pulse_blue_led(100);}
-    void report_dropped(){printf("ID: %d, Dropped tweet\n----------\n",TOS_NODE_ID);printfflush();pulse_red_led(250);}
+    void report_received() {PRINTF("ID: %d, Received tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_red_led(100);pulse_blue_led(100);}
+    void report_dropped(){PRINTF("ID: %d, Dropped tweet\n----------\n",TOS_NODE_ID);PRINTFFLUSH();pulse_red_led(250);}
       
 /*------------------------------------------------- */
     bool tweet_seen(tinyblog_t *tbmsg){
         if (call PktBuffer.check(tbmsg)){
 
-        dbg("Seen packet already");
         return TRUE;
         } else return FALSE;
     }
 
     void add_to_seen(tinyblog_t *tbmsg){
-        printf("ID: %d, adding to blklist\n",TOS_NODE_ID);
+        PRINTF("ID: %d, adding to blklist\n",TOS_NODE_ID);
         call PktBuffer.push(tbmsg);
     }
 
@@ -94,40 +104,39 @@ implementation
         if (!sendBusy)
             report_problem();
         add_to_seen(tbmsg);
-        printf("ID: %d, Tweet sent to: %d from: %d\n",TOS_NODE_ID, dest, tbmsg->sourceMoteID);printfflush();
+        PRINTF("ID: %d, Tweet sent to: %d from: %d\n",TOS_NODE_ID, dest, tbmsg->sourceMoteID);PRINTFFLUSH();
     }
-/*----------------------------------------------------*/
-
-    void add_user_to_follow(int user){
-        //CHANGE TO DATA FIELD using bit manips
-        call FollowList.push(user);
-        printf("Added user: %d\n", user);
-        printfflush();
-    }
-
+/*----------------Timers----------------------------*/
     void startTimer(){
         call Timer.startPeriodic(DEFAULT_INTERVAL);
     }
     void startMoodTimer() {
         call MoodTimer.startPeriodic(DEFAULT_INTERVAL);
     }
+
+/*------------Helper function-------------------------------*/
+    void add_user_to_follow(int user){
+        //CHANGE TO DATA FIELD using bit manips
+        call FollowList.push(user);
+        PRINTF("Added user: %d\n", user);
+        PRINTFFLUSH();
+    }
+
     void getMood(tinyblog_t *tbmsg){
         tbmsg->mood = (light<<16) + temp;
-        printf("%d, %d, %d\n", light, temp, tbmsg->mood);printfflush();
+        PRINTF("%d, %d, %d\n", light, temp, tbmsg->mood);PRINTFFLUSH();
 
     }
   
     bool tweet_for_me(tinyblog_t *tbmsg){
         if (tbmsg->destMoteID == TOS_NODE_ID){
-            printf("ID: %d, Tweet for me\n",TOS_NODE_ID);
+            PRINTF("ID: %d, Tweet for me\n",TOS_NODE_ID);
             return TRUE;
         } else return FALSE;
     }
 
     bool tweet_expired(tinyblog_t *tbmsg){
         if (tbmsg->hopCount == 0){
-
-        dbg("Oh noes, packet's time to die");
         return TRUE;
         } else return FALSE;
     }
@@ -135,15 +144,15 @@ implementation
     bool am_following(tinyblog_t *tbmsg){
         return call FollowList.check(tbmsg->sourceMoteID);
     }
-  
+/*------------------------------------------------------*/
     void process_new_tweet(tinyblog_t *tbmsg){
-        printf("ID: %d, Processing Tweet\n",TOS_NODE_ID);
-        printf("ID: %d, Tweet from %d, seqno %d\n",TOS_NODE_ID, tbmsg->sourceMoteID, tbmsg->seqno);
+        PRINTF("ID: %d, Processing Tweet\n",TOS_NODE_ID);
+        PRINTF("ID: %d, Tweet from %d, seqno %d\n",TOS_NODE_ID, tbmsg->sourceMoteID, tbmsg->seqno);
         if (am_following(tbmsg)){
             call TweetQueue.add_tweet(tbmsg);
-            printf("ID: %d, Saving Tweet(following id)\n",TOS_NODE_ID);
-        } else printf("ID: %d, Not interested\n",TOS_NODE_ID);
-        printfflush();
+            PRINTF("ID: %d, Saving Tweet(following id)\n",TOS_NODE_ID);
+        } else PRINTF("ID: %d, Not interested\n",TOS_NODE_ID);
+        PRINTFFLUSH();
     }
 
     void send_my_tweet(tinyblog_t *tbmsg){
@@ -152,6 +161,8 @@ implementation
         tbmsg->destMoteID = 0;
         getMood(tbmsg);
     }
+
+#if SCEN==1
     void copy_tweet_from_store_to_local(){
         Tweet *tweet;
         if (call TweetQueue.has_tweets()){
@@ -164,14 +175,13 @@ implementation
             memcpy((char *)&(local.data), tweet->msg, tweet->nchars);
         }
     }
-
     void send_tweets_to_base(){
         copy_tweet_from_store_to_local();
         local.destMoteID = BASE;
         local.action = RETURN_TWEETS;
         send(&local, BASE);
-        printf("Forwarding to base\n");
-        printfflush();
+        PRINTF("Forwarding to base\n");
+        PRINTFFLUSH();
 
         if (call TweetQueue.has_tweets())
             moreTweets = TRUE;
@@ -179,6 +189,27 @@ implementation
             moreTweets = FALSE;
     
     }
+#elif SCEN==2
+    void copy_tweet_from_store_to_local(bool start){
+        Tweet *tweet;
+        if (start){
+            call TweetQueue.createIterator();
+        }
+        tweet = call TweetQueue.iterate();
+        if (tweet){ /* Send tweet to base station */
+            local.seqno = tweet->seqno++;
+            local.sourceMoteID = tweet->sourceMoteID;
+            local.hopCount = 6; //D of Web
+            local.nchars = tweet->nchars;
+            local.mood = tweet->mood;
+            memcpy((char *)&(local.data), tweet->msg, tweet->nchars);
+            moreTweets = TRUE;
+        } else{
+            moreTweets = FALSE;
+        }
+    }
+#endif
+    
 
     
 
@@ -188,63 +219,85 @@ implementation
         call TweetQueue.add_tweet(tbmsg);
     }
 
+    void send_tweet_event(bool start){
+        copy_tweet_from_store_to_local(start);
+        local.action = POST_TWEET;
+        send(&local, local.destMoteID);
+    }
+
     void process_interest(tinyblog_t *tbmsg){
         int id = call InterestCache.getSender(tbmsg->destMoteID);
         if (tbmsg->destMoteID == TOS_NODE_ID){
-            copy_tweet_from_store_to_local();
-            local.action = POST_TWEET;
             local.destMoteID = tbmsg->sourceMoteID;
-            send(&local, tbmsg->sourceMoteID);
             call InterestCache.push(tbmsg->destMoteID, tbmsg->sourceMoteID);
-            printf("Forwarding to sink: %d\n", tbmsg->sourceMoteID);
+            send_tweet_event(TRUE);
+            PRINTF("Forwarding to sink: %d\n", tbmsg->sourceMoteID);
             
         }
         else if (id){
             /* if an interest already exists for the user
              * refresh it */
             call InterestCache.refresh(tbmsg->destMoteID, id);
-            printf("Refreshed interest\n");
+            PRINTF("Refreshed interest\n");
         }
         else { /* add interest to cache */
             call InterestCache.push(tbmsg->destMoteID, tbmsg->sourceMoteID);
-            printf("Added interest to cache\n");
+            PRINTF("Added interest to cache\n");
         }
         tbmsg->sourceMoteID = TOS_NODE_ID;
-        printfflush();
+        PRINTFFLUSH();
     }
 
 
     void process_tweet_event(tinyblog_t *tbmsg){
         int id = call InterestCache.getSender(tbmsg->sourceMoteID);
         if (id && id != TOS_NODE_ID){
-            printf("HELLO\n");printfflush();
+            PRINTF("Found route in cache\n");PRINTFFLUSH();
             tbmsg->destMoteID = id;
             send(tbmsg,id);
         } else if (id == TOS_NODE_ID){
-            printf("GOT A RESPONSE, LIKE A BOSS\n");
+            PRINTF("Tweet event for me\n");
             tbmsg->action = RETURN_TWEETS;
             send(tbmsg, BASE);
         }
         else {
-            printf("No valid route for event\n");
+            PRINTF("No valid route for event\n");
             report_dropped();
         }
     }
 
-    void send_interest(tinyblog_t *tbmsg){
-        int id = call InterestCache.getSender(5);
-        printf("Creating interest...");
-        if (id == TOS_NODE_ID){
-            call InterestCache.refresh(5, id);
+    void send_interest(bool start){
+        int followee;
+        if (start){
+            PRINTF("Creating iterator\n");
+            call FollowList.createIterator();
         }
-        else {
-            call InterestCache.push(5, TOS_NODE_ID);
+        followee = call FollowList.iterate();
+        if (followee == -1){ // No more followees
+            moreFollowees == FALSE;
+            PRINTF("End of follow list\n");
         }
-
-        tbmsg->sourceMoteID = TOS_NODE_ID;
-        tbmsg->destMoteID = 5;
-        tbmsg->action = GET_TWEETS;
-        printf("done\n");printfflush();
+        else{ //Someone to follow
+            
+            int id = call InterestCache.getSender(followee);
+            PRINTF("Creating interest...");
+            if (id == TOS_NODE_ID){ // if user has already asked, refresh
+                call InterestCache.refresh(followee, id);
+            }
+            else { //user hasn't asked, create new interest
+                call InterestCache.push(followee, TOS_NODE_ID);
+            }
+            local.seqno++;
+            local.sourceMoteID = TOS_NODE_ID;
+            local.destMoteID = followee;
+            local.action = GET_TWEETS;
+            // create msg to broadcast out
+            PRINTF("done\n");
+            send(&local,AM_BROADCAST_ADDR);
+            moreFollowees = TRUE;
+        }
+        
+        PRINTFFLUSH();
     }
 
 #endif
@@ -253,12 +306,14 @@ implementation
 
 
     
-
+/*************************************************************/
 /***********EVENTS********************************************/
     event void Boot.booted() {
         if (call RadioControl.start() != SUCCESS) report_problem();
         local.seqno = 0;
         add_user_to_follow(3);
+        
+
     }
 /*-----------Radio & AM EVENTS------------------------------- */
     event void RadioControl.startDone(error_t error) {
@@ -277,14 +332,15 @@ implementation
         bool myTweet;
         int id;
         report_received();
+        
         myTweet =  tweet_for_me(tweet);
         /* Check if tweet is new, drop old tweets, stop broadcast storm */
         if (tweet_seen(tweet)){
             report_dropped();
             return msg;
         }
-        printf("TWEET FROM: %d to %d\n", tweet->sourceMoteID, tweet->destMoteID);
-        printfflush();
+        PRINTF("TWEET FROM: %d to %d\n", tweet->sourceMoteID, tweet->destMoteID);
+        PRINTFFLUSH();
 #if SCEN == 1
             
     /* Process tweet as it's new! */
@@ -294,18 +350,25 @@ implementation
             case ADD_USER  : add_user_to_follow(tweet->data[0]); return msg;
             default:break;
         }
-
+        /* Tweet processed, check if end of line and forward */
+        if (tweet_expired(tweet)){
+            report_dropped();
+        } else {
+            send(tweet, AM_BROADCAST_ADDR);
+        }
+        
 
 #elif SCEN == 2
+        /* Tweet possibly already seen as interest */
         id = call InterestCache.getSender(tweet->destMoteID);
         if (id > 0)
                 tweet->sourceMoteID = id;
         if (fromBase || !tweet_seen(tweet)){
-/* Process tweet as it's new! */
+    /* Process tweet as it's new! */
         
             switch(tweet->action){
                 case POST_TWEET: (fromBase?save_tweet(tweet):process_tweet_event(tweet));return msg;break;
-                case GET_TWEETS: (fromBase?send_interest(tweet):process_interest(tweet));break;
+                case GET_TWEETS: (fromBase?send_interest(TRUE):process_interest(tweet));break;
                 case ADD_USER  : add_user_to_follow(tweet->data[0]); return msg;
                 default:break;
             }
@@ -315,15 +378,10 @@ implementation
             return msg;
         }
 #endif
-    /* Tweet processed, check if end of line and forward */
+    
         
-        if (tweet_expired(tweet)){
-            report_dropped();
-        } else {
-            send(tweet, AM_BROADCAST_ADDR);
-        }
         
-         printf("----------\n");printfflush();
+         PRINTF("----------\n");PRINTFFLUSH();
         return msg; /* Return packet to TinyOS */
         
     }
@@ -335,9 +393,20 @@ implementation
             report_problem();
 
         sendBusy = FALSE;
+        #if SCEN==1
         if (moreTweets){
             send_tweets_to_base();
         }
+        #elif SCEN==2
+        if (moreTweets){
+            send_tweet_event(FALSE);
+        }
+        /* Are there any more interests(get tweets) to send? */
+        if (moreFollowees){
+            send_interest(FALSE);
+        }
+        #endif
+
     }
 
     event void Timer.fired() {
@@ -353,12 +422,12 @@ implementation
             strcpy((char *)tweet->data,"Hello, world!");
             tweet->mood = 0;
             add_to_seen(tweet);
-            printf("ID: %d, Built tweet, %d\n",TOS_NODE_ID, tweet->seqno-1);
+            PRINTF("ID: %d, Built tweet, %d\n",TOS_NODE_ID, tweet->seqno-1);
             if (call AMSend.send(AM_BROADCAST_ADDR, &am_pkt, sizeof(tinyblog_t)) == SUCCESS){
                 sendBusy = TRUE;
             }
         }
-        printf("ID: %d, Sent tweet\n",TOS_NODE_ID);printfflush();
+        PRINTF("ID: %d, Sent tweet\n",TOS_NODE_ID);PRINTFFLUSH();
 
         if (!sendBusy)
             report_problem();
@@ -374,12 +443,13 @@ implementation
         strcpy((char *)&local.data,"Hello, world!");
         local.mood = 0;
         save_tweet(&local);
-
-        call InterestCache.push(5, TOS_NODE_ID);
-        local.sourceMoteID = TOS_NODE_ID;
-        local.destMoteID = 5;
-        local.action = GET_TWEETS;
-        send(&local, AM_BROADCAST_ADDR);
+        if (TOS_NODE_ID == 3){
+            call InterestCache.push(8, TOS_NODE_ID);
+            local.sourceMoteID = TOS_NODE_ID;
+            local.destMoteID = 8;
+            local.action = GET_TWEETS;
+            send(&local, AM_BROADCAST_ADDR);
+        }
 
 
 #endif

@@ -9,7 +9,7 @@ implementation{
 	Tweet tweetStore[QSIZE];
 	uint8_t in = 0;
 	uint8_t out = 0;
-
+	uint8_t iterator = 0;
 	command void TweetQueue.add_tweet(tinyblog_t *tweet){
 		memcpy(tweetStore[in].msg, tweet->data, tweet->nchars);
 		tweetStore[in].nchars = tweet->nchars;
@@ -23,7 +23,19 @@ implementation{
 		out = (out + 1) % QSIZE;
 		return t;
 	}
-	 command bool TweetQueue.has_tweets(){
+	command bool TweetQueue.has_tweets(){
 	 	return !(in == out);
-	 }
+	}
+	command void TweetQueue.createIterator(){
+		iterator = out;
+	}
+	command Tweet * TweetQueue.iterate(){
+		Tweet *t;
+		if (iterator != in){
+			t = &tweetStore[iterator];
+			iterator = (iterator+1) % QSIZE;
+			return t;
+		}
+		return NULL;
+	}
 }

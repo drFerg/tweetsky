@@ -4,18 +4,26 @@
 configuration TinyBlogAppC { }
 implementation
 {
-    components TinyBlogC, MainC, ActiveMessageC, LedsC, PrintfC, SerialStartC,
+    components TinyBlogC, MainC, ActiveMessageC, LedsC, SerialStartC,
         TweetQueueC, 
         PktBufferC, 
-        CircularQC,
+        CircularQC;
+    #if DEBUG
+    components PrintfC;
+    #endif
 
-        new TimerMilliC(), 
+        components new TimerMilliC(), 
         new TimerMilliC() as MTimer,
         new TimerMilliC() as LEDTimer0,
         new TimerMilliC() as LEDTimer1,
         new TimerMilliC() as LEDTimer2,
+        #if TELOS
         new HamamatsuS10871TsrC() as LSensor,
-        new SensirionSht11C() as TSensor,
+        new SensirionSht11C().Temperature as TSensor,
+        #else
+        new DemoSensorC() as LSensor,
+        new DemoSensorC() as TSensor,
+        #endif
         new AMSenderC(AM_TINYBLOGMSG), new AMReceiverC(AM_TINYBLOGMSG);
         #if SCEN==2 
         components InterestTableC, new TimerMilliC() as InterestTimer;
@@ -30,7 +38,7 @@ implementation
     TinyBlogC.LEDTimer1 -> LEDTimer1;
     TinyBlogC.LEDTimer2 -> LEDTimer2;
     TinyBlogC.LightSensor -> LSensor;
-    TinyBlogC.TempSensor -> TSensor.Temperature;
+    TinyBlogC.TempSensor -> TSensor;
     TinyBlogC.Leds -> LedsC;
     TinyBlogC.TweetQueue -> TweetQueueC;
     TinyBlogC.PktBuffer -> PktBufferC;

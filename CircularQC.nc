@@ -7,6 +7,7 @@ implementation{
 	int queue[CQSIZE];
 	uint8_t in = 0;
 	uint8_t out = 0;
+	uint8_t iterator = 0;
 	command void CircularQ.push(int val){
 		queue[in] = val;
 		in = (in + 1) % CQSIZE;
@@ -26,6 +27,19 @@ implementation{
 			}
 		}
 		return FALSE;
+	}
+
+	command void CircularQ.createIterator(){
+		iterator = out;
+	}
+	command int CircularQ.iterate(){
+		int temp;
+		if (iterator != in){
+			temp = queue[iterator];
+			iterator = (iterator+1) % CQSIZE;
+			return temp;
+		}
+		return -1;
 	}
 
 }

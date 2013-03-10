@@ -111,11 +111,11 @@ public class TinyBlogClient implements MessageListener
         if (msg instanceof TinyBlogMsg) {
             TinyBlogMsg tbmsg = (TinyBlogMsg)msg;
             if (tbmsg.get_action() == RETURN_TWEETS){
-                System.out.println();
                 System.out.printf("Node %d tweeted: %s\nMood = %d\n", tbmsg.get_sourceMoteID(), 
                     convertShortToString(tbmsg.get_data(),tbmsg.get_nchars()), tbmsg.get_mood());
             } else if (tbmsg.get_sourceMoteID() != MOTEID ){
-                System.out.println("Received a msg");
+                //System.out.println("Received a msg");
+                return;
             }
         }
         System.out.print(">>");

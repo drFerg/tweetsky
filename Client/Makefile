@@ -2,6 +2,9 @@ GEN=TinyBlogMsg.java Constants.java
 
 all: tinyblogclient.jar
 
+serial:
+	java net.tinyos.sf.SerialForwarder -comm serial@/dev/ttyUSB0:telosb &
+
 tinyblogclient.jar: TinyBlogClient.class
 	jar cf $@ *.class
 

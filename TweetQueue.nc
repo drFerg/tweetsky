@@ -4,6 +4,8 @@ interface TweetQueue {
 	command void add_tweet(tinyblog_t *tweet);
 	command Tweet * pop_tweet();
 	command bool has_tweets();
+	command void createIterator();
+	command Tweet * iterate();
 }
 
 
