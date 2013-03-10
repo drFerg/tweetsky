@@ -77,7 +77,7 @@ implementation
     void report_post_tweet(){PRINTF("ID: %d, Posted tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_green_led(500);}
     void report_fetch_tweet(){PRINTF("ID: %d, Fetched tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_blue_led(500);}
 
-    void report_problem() { call Leds.led1Toggle(); }
+    void report_problem() { pulse_red_led(500);pulse_blue_led(500);pulse_green_led(500); }
     void report_sent() {pulse_green_led(100);}
     void report_received() {PRINTF("ID: %d, Received tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_red_led(100);pulse_blue_led(100);}
     void report_dropped(){PRINTF("ID: %d, Dropped tweet\n----------\n",TOS_NODE_ID);PRINTFFLUSH();pulse_red_led(250);}
@@ -144,6 +144,20 @@ implementation
     bool am_following(tinyblog_t *tbmsg){
         return call FollowList.check(tbmsg->sourceMoteID);
     }
+/*---------------Direct message--------------------------------*/
+
+    void send_direct_msg(tinyblog_t *tbmsg){
+        tbmsg->sourceMoteID = TOS_NODE_ID;
+        send(tbmsg,tbmsg->destMoteID);
+    }
+    void receive_direct_msg(tinyblog_t *tbmsg){
+        PRINTF("Received a direct message from: %d\n", tbmsg->sourceMoteID);
+        PRINTFFLUSH();
+        tbmsg->destMoteID = BASE;
+        send(tbmsg,BASE);
+    }
+
+
 /*------------------------------------------------------*/
     void process_new_tweet(tinyblog_t *tbmsg){
         PRINTF("ID: %d, Processing Tweet\n",TOS_NODE_ID);
@@ -167,7 +181,7 @@ implementation
         Tweet *tweet;
         if (call TweetQueue.has_tweets()){
             tweet = call TweetQueue.pop_tweet(); /* Send tweet to base station */
-            local.seqno = tweet->seqno++;
+            local.seqno = tweet->seqno;
             local.sourceMoteID = tweet->sourceMoteID;
             local.hopCount = 6; //D of Web
             local.nchars = tweet->nchars;
@@ -197,7 +211,7 @@ implementation
         }
         tweet = call TweetQueue.iterate();
         if (tweet){ /* Send tweet to base station */
-            local.seqno = tweet->seqno++;
+            local.seqno++;
             local.sourceMoteID = tweet->sourceMoteID;
             local.hopCount = 6; //D of Web
             local.nchars = tweet->nchars;
@@ -216,12 +230,16 @@ implementation
 
 #if SCEN == 2
     void save_tweet(tinyblog_t *tbmsg){
+        PRINTF("SAVED TWEET\n");
+        PRINTFFLUSH();
+        tbmsg->sourceMoteID = TOS_NODE_ID;
         call TweetQueue.add_tweet(tbmsg);
     }
 
     void send_tweet_event(bool start){
         copy_tweet_from_store_to_local(start);
         local.action = POST_TWEET;
+        PRINTF("Tweet: seqno: %d\n",local.seqno);PRINTFFLUSH();
         send(&local, local.destMoteID);
     }
 
@@ -251,17 +269,18 @@ implementation
 
     void process_tweet_event(tinyblog_t *tbmsg){
         int id = call InterestCache.getSender(tbmsg->sourceMoteID);
-        if (id && id != TOS_NODE_ID){
+        if (id && id == TOS_NODE_ID){
+            PRINTF("Tweet event for me\n");PRINTFFLUSH();
+            tbmsg->action = RETURN_TWEETS;
+            send(tbmsg, BASE);
+            
+        } else if (id && id != TOS_NODE_ID){
             PRINTF("Found route in cache\n");PRINTFFLUSH();
             tbmsg->destMoteID = id;
             send(tbmsg,id);
-        } else if (id == TOS_NODE_ID){
-            PRINTF("Tweet event for me\n");
-            tbmsg->action = RETURN_TWEETS;
-            send(tbmsg, BASE);
         }
         else {
-            PRINTF("No valid route for event\n");
+            PRINTF("No valid route for event\n");PRINTFFLUSH();
             report_dropped();
         }
     }
@@ -274,7 +293,7 @@ implementation
         }
         followee = call FollowList.iterate();
         if (followee == -1){ // No more followees
-            moreFollowees == FALSE;
+            moreFollowees = FALSE;
             PRINTF("End of follow list\n");
         }
         else{ //Someone to follow
@@ -311,7 +330,8 @@ implementation
     event void Boot.booted() {
         if (call RadioControl.start() != SUCCESS) report_problem();
         local.seqno = 0;
-        add_user_to_follow(3);
+        PRINTF("*********************\n****** BOOTED *******\n*********************\n");
+        PRINTFFLUSH();
         
 
     }
@@ -319,7 +339,7 @@ implementation
     event void RadioControl.startDone(error_t error) {
         startMoodTimer();
 #if SCEN==2
-        startTimer();
+        //startTimer();
 #endif
     }
 
@@ -336,6 +356,7 @@ implementation
         myTweet =  tweet_for_me(tweet);
         /* Check if tweet is new, drop old tweets, stop broadcast storm */
         if (tweet_seen(tweet)){
+            PRINTF("Already seen\n");PRINTFFLUSH();
             report_dropped();
             return msg;
         }
@@ -348,10 +369,12 @@ implementation
             case POST_TWEET: (myTweet?send_my_tweet(tweet):process_new_tweet(tweet));break;
             case GET_TWEETS: send_tweets_to_base();return msg;
             case ADD_USER  : add_user_to_follow(tweet->data[0]); return msg;
+            case DIRECT_MESSAGE: (myTweet?receive_direct_msg(tweet):send_direct_msg(tweet));return msg;
             default:break;
         }
         /* Tweet processed, check if end of line and forward */
         if (tweet_expired(tweet)){
+            PRINTF("Expired\n");
             report_dropped();
         } else {
             send(tweet, AM_BROADCAST_ADDR);

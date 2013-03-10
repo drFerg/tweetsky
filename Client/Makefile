@@ -12,7 +12,7 @@ TinyBlogMsg.java: ../TinyBlogMsg.h
 	mig -target=null -java-classname=TinyBlogMsg java ../TinyBlogMsg.h TinyBlogMsg -o $@
 
 Constants.java: ../TinyBlogMsg.h
-	ncg -target=null -java-classname=Constants java ../TinyBlogMsg.h DATA_SIZE POST_TWEET ADD_USER GET_TWEETS INTEREST TWEET_EVENT -o $@
+	ncg -target=null -java-classname=Constants java ../TinyBlogMsg.h DIRECT_MESSAGE DATA_SIZE POST_TWEET ADD_USER GET_TWEETS INTEREST TWEET_EVENT -o $@
 
 
 TinyBlogClient.class: $(wildcard *.java) $(GEN)

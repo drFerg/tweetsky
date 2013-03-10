@@ -10,13 +10,14 @@ public class TinyBlogClient implements MessageListener
     short POST_TWEET = Constants.POST_TWEET;
     short ADD_USER   = Constants.ADD_USER;
     short GET_TWEETS = Constants.GET_TWEETS;
+    short DIRECT_MESSAGE = Constants.DIRECT_MESSAGE;
 
     short RETURN_TWEETS = 4;
-    short BROADCAST_TWEET = 5;
 
     MoteIF mote;
-    int MOTEID = 5;
-    short seqno = 0;
+    int MYID = 0;
+    int MOTEID = 0;
+    short seqno = 1;
 
     private void cli(){
         Scanner input = new Scanner(System.in);
@@ -32,6 +33,9 @@ public class TinyBlogClient implements MessageListener
             else if (command.equals("follow")){
                 followUser(input.nextInt());
             } 
+            else if(command.equals("direct")){
+                directMessage(input.nextInt(),input.nextLine().trim());
+            }
             else if (command.equals("connect")){
                 MOTEID = input.nextInt();
             }
@@ -100,10 +104,30 @@ public class TinyBlogClient implements MessageListener
         short len = (short)data.length;
         TinyBlogMsg msg = new TinyBlogMsg();
         msg.set_action(POST_TWEET);
+        msg.set_destMoteID(MOTEID);
         msg.set_data(data);
         msg.set_nchars(len);
         sendMsg(msg);
         System.out.println("sent!");
+    }
+
+    void directMessage(int dest, String text){
+        if (text.length() >14){
+            System.out.println("Tweet to long, needs to be < 15 chars");
+            return;
+        }
+        System.out.println("Direct msg: " + text);
+        System.out.printf("Node %d: Sending message...", MOTEID);
+        short[] data = convertStringToShort(text);
+        short len = (short)data.length;
+        TinyBlogMsg msg = new TinyBlogMsg();
+        msg.set_action(DIRECT_MESSAGE);
+        msg.set_destMoteID(dest);
+        msg.set_data(data);
+        msg.set_nchars(len);
+        sendMsg(msg);
+        System.out.println("sent!");
+
     }
 
 
@@ -111,9 +135,12 @@ public class TinyBlogClient implements MessageListener
         if (msg instanceof TinyBlogMsg) {
             TinyBlogMsg tbmsg = (TinyBlogMsg)msg;
             if (tbmsg.get_action() == RETURN_TWEETS){
-                System.out.printf("Node %d tweeted: %s\nMood = %d\n", tbmsg.get_sourceMoteID(), 
-                    convertShortToString(tbmsg.get_data(),tbmsg.get_nchars()), tbmsg.get_mood());
-            } else if (tbmsg.get_sourceMoteID() != MOTEID ){
+                System.out.printf("Node %d tweeted: %s\nMood = %d\nseqno: %d\n", tbmsg.get_sourceMoteID(), 
+                    convertShortToString(tbmsg.get_data(),tbmsg.get_nchars()), tbmsg.get_mood(),tbmsg.get_seqno());
+            } else if(tbmsg.get_action() == DIRECT_MESSAGE && tbmsg.get_destMoteID() == MYID ){
+                System.out.printf("Node %d direct messaged you: %s\n\nseqno: %d\n", tbmsg.get_sourceMoteID(), 
+                    convertShortToString(tbmsg.get_data(),tbmsg.get_nchars()),tbmsg.get_seqno());
+            }else if (tbmsg.get_sourceMoteID() != MOTEID ){
                 //System.out.println("Received a msg");
                 return;
             }
@@ -128,8 +155,7 @@ public class TinyBlogClient implements MessageListener
     /* Broadcast a version+interval message. */
     void sendMsg(TinyBlogMsg msg) {
 
-        msg.set_sourceMoteID(0);
-        msg.set_destMoteID(MOTEID);
+        msg.set_sourceMoteID(MYID);
         msg.set_seqno(seqno++);
         msg.set_hopCount((short)6);
         try {
