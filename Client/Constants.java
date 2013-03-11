@@ -7,7 +7,7 @@
 public class Constants  {
     public static final byte DIRECT_MESSAGE = 5;
     public static final byte ADD_USER = 2;
-    public static final byte DATA_SIZE = 14;
+    public static final byte DATA_SIZE = 50;
     public static final byte GET_TWEETS = 3;
     public static final byte POST_TWEET = 1;
 }

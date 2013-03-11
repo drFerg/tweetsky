@@ -76,6 +76,17 @@ The host-side application is a command line application written in Java, this wa
 
 \subsection{Mote application}
 \begin{itemize}
+	\item LED actions
+	Several led actions have been implemented to make it easier to understand the activity of the mote from the onboard leds. Actions with signify positive activity have relatively short LED blinks, 2Hz, where as actions with signify negative activity (dropped packet/problem) have relatively long LED blinks, 1Hz. The reason for this was to make it easier to see when problems occur on the mote, which should hopefully be less frequent, hence the longer blinks would make it easier to see when they do occur.
+	\begin{itemize}
+		\item Get tweet, blink blue, 2Hz
+		\item Post tweet, blink green, 2Hz
+		\item Forward tweet, blink red, 2Hz 
+		\item Receive message, blink red \& green, 5Hz
+		\item Send message, blink greed, 5Hz
+		\item Dropped message, blink red, 1Hz
+		\item Problem, blink red \& green \& blue, 1Hz
+	\end{itemize}
 	\item Multi-hop, packet forwarding
 	\begin{itemize}
 		\item The mote application fully supports robust packet forwarding and avoids contributing to broadcast storms. This is done through the correct use of using the TTL field in the data structure, as well as using a buffer of previously seen packet meta data. This buffer is used so that when new packets arrive they can be checked and if a match is found in the buffer they are dropped immediately, as they must have been re-broadcasted. The buffer is a circular data structure storing 32 packets metadata, so when full it overwrites the oldest packet. This makes a compromise between the size of the buffer and the amount of ``recent'' packets which can be recognised.
@@ -95,12 +106,36 @@ The host-side application is a command line application written in Java, this wa
 			 \end{itemize} 
 			 \item Retrieve new tweets
 			 \begin{itemize}
-			 	\item 
+			 	\item In scenario 1, when the host-side application sends the get tweets command, the mote sends all of the tweets stored in its local cache back to the host.
+			 	\item However, in scenario 2 the mote does not store the tweets locally, so instead it sends an get tweets request to other motes which it follows (an interest).
 			 \end{itemize}
 		\end{itemize}
 
 	\end{itemize}
 \end{itemize}
+
+\subsection{Scenarios}
+Both scenarios have been implemented and can be selected at compile time by specifying the -DSCEN=N flag in the makefile, where N is the scenario number.
+\subsubsection{Scenario 1}
+Scenario 1 has been fully implemented with the appropriate forwarding mechanics as set by the specification.
+
+\subsubsection{Scenario 2}
+\label{sec:dd}
+Scenario 2 has been implemented with directed-diffusion based routing. This is implemented using the concept of interests (get tweet), events (post tweet) and an interest cache. When a mote issues a get tweet request it broadcasts it to the network, each mote that receives this checks if it has already seen this request in its interest cache, if not then it creates an entry storing the destination of the request and previous hop address. However if it has already seen this request then, it has either come from another route, possibly worse/slower, and so it is ignored. It then broadcasts the get tweets request to its neighbours, this is repeated until the destination mote receives the request. Once received it then sends its tweets back the direction the request came from, each mote that receives it then checks its interest table for the next hop based on the source of the event (the destination of the get tweet/interest). If any mote sees the data more than once, it drops the packet. Routes are also erased if they are not refreshed from repeat request after a short period of time.
+
+\subsection{Additional Requirements}
+\subsubsection{Mood}
+Capturing the mood by sensing the temperature and light readings from the user's mote has been implemented. It has been implemented by using a periodic timer which senses the temperature and light intensity every 5 seconds, so when the user sends a tweet the most recent mood data, up to 5 seconds old, is attached to the tweet. This was done because of the split-phase nature of the sensors, by using a timer and then copying the most recent readings into a tweet means that the system doesn't have to wait for the sensors to signal an event to continue the tweeting.
+If the platform does not have sensors available, the -DTELOS flag can be removed and instead the DemoSensor module will be used.
+\subsubsection{Updateable follow list}
+The follow list which is stored in the mote is fully updateable at run-time. This is done by sending a \textit{follow} command from the host-side application to the users mote, where it adds the mote id to a follow list. If too many ids are added, the list overwrites the oldest id (circular queue).
+\subsubsection{Direct messaging}
+Direct messaging to specific motes has been implemented in both the host-side and mote applications. To send a direct message the command is: \textit{direct} \textless nodeid\textgreater message .
+The message is then unicast directly to the mote specified, once the mote receives it the message is then forwarded to the base station where it is displayed by the host-side application. For this an extra action, was created in TinyBlogMsg.h.
+\subsubsection{Encryption}
+Encryption of tweets has been enabled as a compile time option, -DSECURE \& -DCC2420\_HW\_SECURITY, also included in the BaseStation folder is the encrypted enabled Base station to communicate with the motes. It has been implemented using the encryption capabilities of the CC2420 radio onboard the TelosB motes and uses the SecAMSender module to encrypt and send the messages. For receiving packets, the normal AMReceiver module handles decryption of the messages and simply returns the same payload as if it were unencrypted. All nodes use the same key to encrypt and decrypt the data.
+The implemented version, Counter Mode Encryption (CTR), only supports encryption of the data, but modifying the implementation to use both encryption and authentication would be relatively straight forward by using Counter with Cipher Block Chaining Authentication Code (CCM) instead. By doing so it would allow the motes to ensure that the data being transmitted is secure and that it is from who it says it's from. 
+
 
 \section{Testing \& Evaluation}
 

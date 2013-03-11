@@ -19,7 +19,7 @@ enum {
    See $TOSROOT/tos/types/message.h
  */
 enum {
-  DATA_SIZE = 100
+  DATA_SIZE = 50
 };
 
 typedef nx_struct TinyBlogMsg {

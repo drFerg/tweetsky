@@ -11,23 +11,34 @@ implementation
     #if DEBUG
     components PrintfC;
     #endif
-
+/* Timers */
         components new TimerMilliC(), 
         new TimerMilliC() as MoodTimer,
         new TimerMilliC() as LEDTimer0,
         new TimerMilliC() as LEDTimer1,
         new TimerMilliC() as LEDTimer2,
+/* Sensors */
         #if TELOS
         new HamamatsuS10871TsrC() as LightSensor,
-        new SensirionSht11C().Temperature as TempSensor,
+        new SensirionSht11C().Temperature as TempSensor;
         #else
-        new DemoSensorC() as LSensor,
-        new DemoSensorC() as TSensor,
+        new DemoSensorC() as LightSensor,
+        new DemoSensorC() as TempSensor;
         #endif
-        new AMSenderC(AM_TINYBLOGMSG), new AMReceiverC(AM_TINYBLOGMSG);
+/* Radio/Security */
+        #if SECURE
+        components new SecAMSenderC(AM_TINYBLOGMSG) as AMSenderC;
+        components CC2420KeysC;
+        #else
+        components new AMSenderC(AM_TINYBLOGMSG);
+        #endif
+        components new AMReceiverC(AM_TINYBLOGMSG);
+/* Scenario 2 */
         #if SCEN==2 
         components InterestTableC, new TimerMilliC() as InterestTimer;
         #endif
+
+
     TinyBlogC.Boot -> MainC;
     TinyBlogC.RadioControl -> ActiveMessageC;
     TinyBlogC.AMSend -> AMSenderC;
@@ -48,5 +59,9 @@ implementation
     TinyBlogC.InterestTimer -> InterestTimer;
     #endif
 
+    #if SECURE
+    TinyBlogC.CC2420Security -> AMSenderC;
+    TinyBlogC.CC2420Keys -> CC2420KeysC;
+    #endif
   
 }

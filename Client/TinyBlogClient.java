@@ -94,8 +94,8 @@ public class TinyBlogClient implements MessageListener
         sendMsg(msg);
     }
     void tweet(String text){
-        if (text.length() >14){
-            System.out.println("Tweet to long, needs to be < 15 chars");
+        if (text.length() >100){
+            System.out.println("Tweet to long, needs to be < 101 chars");
             return;
         }
         System.out.println("Tweet: " + text);

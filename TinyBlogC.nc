@@ -39,14 +39,23 @@ module TinyBlogC @safe()
         interface InterestTable as InterestCache;
         interface Timer<TMilli> as InterestTimer;
         #endif
+        #if SECURE
+        interface CC2420SecurityMode as CC2420Security;
+        interface CC2420Keys;
+        #endif
     }
 }
 implementation
 {
+
     bool sendBusy = FALSE;
     bool moreTweets = FALSE;
     #ifdef SCEN==2
     bool moreFollowees = FALSE;
+    #endif
+    #if SECURE
+    uint8_t key[16] = {0x98,0x67,0x7F,0xAF,0xD6,0xAD,0xB7,0x0C,0x59,0xE8,0xD9,0x47,0xC9,0x71,0x15,0x0F};
+    uint8_t keyReady = 0; // should be set to 1 when key setting is done
     #endif
     message_t am_pkt;
     tinyblog_t local;
@@ -77,10 +86,10 @@ implementation
     void report_post_tweet(){PRINTF("ID: %d, Posted tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_green_led(500);}
     void report_fetch_tweet(){PRINTF("ID: %d, Fetched tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_blue_led(500);}
 
-    void report_problem() { pulse_red_led(500);pulse_blue_led(500);pulse_green_led(500); }
+    void report_problem() { pulse_red_led(1000);pulse_blue_led(1000);pulse_green_led(1000); }
     void report_sent() {pulse_green_led(100);}
     void report_received() {PRINTF("ID: %d, Received tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_red_led(100);pulse_blue_led(100);}
-    void report_dropped(){PRINTF("ID: %d, Dropped tweet\n----------\n",TOS_NODE_ID);PRINTFFLUSH();pulse_red_led(250);}
+    void report_dropped(){PRINTF("ID: %d, Dropped tweet\n----------\n",TOS_NODE_ID);PRINTFFLUSH();pulse_red_led(1000);}
       
 /*------------------------------------------------- */
     bool tweet_seen(tinyblog_t *tbmsg){
@@ -99,10 +108,15 @@ implementation
     void send(tinyblog_t *tbmsg, int dest){
         tinyblog_t * payload = (tinyblog_t *) (call AMSend.getPayload(&am_pkt, sizeof(tinyblog_t)));
         memcpy(payload, tbmsg, sizeof(tinyblog_t));
+        #if SECURE
+        call CC2420Security.setCtr(&am_pkt, 0, 0); //set to encrypt
+        #endif 
         if (call AMSend.send(dest, &am_pkt, sizeof(tinyblog_t)) == SUCCESS)
             sendBusy = TRUE;
-        if (!sendBusy)
+        if (!sendBusy){
             report_problem();
+            PRINTF("ID: %d, Tweet could no be sent, channel busy\n", TOS_NODE_ID);
+        }
         add_to_seen(tbmsg);
         PRINTF("ID: %d, Tweet sent to: %d from: %d\n",TOS_NODE_ID, dest, tbmsg->sourceMoteID);PRINTFFLUSH();
     }
@@ -341,13 +355,21 @@ implementation
 /*-----------Radio & AM EVENTS------------------------------- */
     event void RadioControl.startDone(error_t error) {
         startMoodTimer();
-#if SCEN==2
+    #if SCEN==2
         //startTimer();
-#endif
+    #endif
+    #if SECURE
+        call CC2420Keys.setKey(1, key);
+    #endif
     }
 
     event void RadioControl.stopDone(error_t error) {}
-
+/*----------------Security events -------------------------------*/
+    #if SECURE
+    event void CC2420Keys.setKeyDone(uint8_t keyNo, uint8_t* skey){
+        keyReady = 1;
+    }
+    #endif
 /*-----------Received packet event, main state event ------------------------------- */
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
         tinyblog_t *tweet = (tinyblog_t *) payload;

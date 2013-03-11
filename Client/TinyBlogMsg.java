@@ -7,12 +7,12 @@
 public class TinyBlogMsg extends net.tinyos.message.Message {
 
     /** The default size of this message type in bytes. */
-    public static final int DEFAULT_MESSAGE_SIZE = 26;
+    public static final int DEFAULT_MESSAGE_SIZE = 62;
 
     /** The Active Message type associated with this message. */
     public static final int AM_TYPE = 10;
 
-    /** Create a new TinyBlogMsg of size 26. */
+    /** Create a new TinyBlogMsg of size 62. */
     public TinyBlogMsg() {
         super(DEFAULT_MESSAGE_SIZE);
         amTypeSet(AM_TYPE);
@@ -104,7 +104,7 @@ public class TinyBlogMsg extends net.tinyos.message.Message {
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
         s += "  [data=";
-        for (int i = 0; i < 14; i++) {
+        for (int i = 0; i < 50; i++) {
           s += "0x"+Long.toHexString(getElement_data(i) & 0xff)+" ";
         }
         s += "]\n";
@@ -521,7 +521,7 @@ public class TinyBlogMsg extends net.tinyos.message.Message {
      */
     public static int offset_data(int index1) {
         int offset = 64;
-        if (index1 < 0 || index1 >= 14) throw new ArrayIndexOutOfBoundsException();
+        if (index1 < 0 || index1 >= 50) throw new ArrayIndexOutOfBoundsException();
         offset += 0 + index1 * 8;
         return (offset / 8);
     }
@@ -531,7 +531,7 @@ public class TinyBlogMsg extends net.tinyos.message.Message {
      */
     public static int offsetBits_data(int index1) {
         int offset = 64;
-        if (index1 < 0 || index1 >= 14) throw new ArrayIndexOutOfBoundsException();
+        if (index1 < 0 || index1 >= 50) throw new ArrayIndexOutOfBoundsException();
         offset += 0 + index1 * 8;
         return offset;
     }
@@ -540,7 +540,7 @@ public class TinyBlogMsg extends net.tinyos.message.Message {
      * Return the entire array 'data' as a short[]
      */
     public short[] get_data() {
-        short[] tmp = new short[14];
+        short[] tmp = new short[50];
         for (int index0 = 0; index0 < numElements_data(0); index0++) {
             tmp[index0] = getElement_data(index0);
         }
@@ -574,14 +574,14 @@ public class TinyBlogMsg extends net.tinyos.message.Message {
      * Return the total size, in bytes, of the array 'data'
      */
     public static int totalSize_data() {
-        return (112 / 8);
+        return (400 / 8);
     }
 
     /**
      * Return the total size, in bits, of the array 'data'
      */
     public static int totalSizeBits_data() {
-        return 112;
+        return 400;
     }
 
     /**
@@ -609,7 +609,7 @@ public class TinyBlogMsg extends net.tinyos.message.Message {
      * Return the number of elements in the array 'data'
      */
     public static int numElements_data() {
-        return 14;
+        return 50;
     }
 
     /**
@@ -617,7 +617,7 @@ public class TinyBlogMsg extends net.tinyos.message.Message {
      * for the given dimension.
      */
     public static int numElements_data(int dimension) {
-      int array_dims[] = { 14,  };
+      int array_dims[] = { 50,  };
         if (dimension < 0 || dimension >= 1) throw new ArrayIndexOutOfBoundsException();
         if (array_dims[dimension] == 0) throw new IllegalArgumentException("Array dimension "+dimension+" has unknown size");
         return array_dims[dimension];
@@ -639,7 +639,7 @@ public class TinyBlogMsg extends net.tinyos.message.Message {
      * Read the array 'data' as a String
      */
     public String getString_data() { 
-         char carr[] = new char[Math.min(net.tinyos.message.Message.MAX_CONVERTED_STRING_LENGTH,14)];
+         char carr[] = new char[Math.min(net.tinyos.message.Message.MAX_CONVERTED_STRING_LENGTH,50)];
          int i;
          for (i = 0; i < carr.length; i++) {
              if ((char)getElement_data(i) == (char)0) break;
@@ -651,7 +651,7 @@ public class TinyBlogMsg extends net.tinyos.message.Message {
     /////////////////////////////////////////////////////////
     // Accessor methods for field: mood
     //   Field type: long, unsigned
-    //   Offset (bits): 176
+    //   Offset (bits): 464
     //   Size (bits): 32
     /////////////////////////////////////////////////////////
 
@@ -673,14 +673,14 @@ public class TinyBlogMsg extends net.tinyos.message.Message {
      * Return the offset (in bytes) of the field 'mood'
      */
     public static int offset_mood() {
-        return (176 / 8);
+        return (464 / 8);
     }
 
     /**
      * Return the offset (in bits) of the field 'mood'
      */
     public static int offsetBits_mood() {
-        return 176;
+        return 464;
     }
 
     /**
