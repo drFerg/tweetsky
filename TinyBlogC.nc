@@ -123,7 +123,7 @@ implementation
     }
 
     void getMood(tinyblog_t *tbmsg){
-        tbmsg->mood = (light<<16) + temp;
+        tbmsg->mood = (temp<<16) + light;
         PRINTF("%d, %d, %d\n", light, temp, tbmsg->mood);PRINTFFLUSH();
 
     }
@@ -164,6 +164,9 @@ implementation
         PRINTF("ID: %d, Tweet from %d, seqno %d\n",TOS_NODE_ID, tbmsg->sourceMoteID, tbmsg->seqno);
         if (am_following(tbmsg)){
             call TweetQueue.add_tweet(tbmsg);
+            tbmsg->destMoteID = BASE;
+            tbmsg->action = RETURN_TWEETS;
+            send(tbmsg, BASE);
             PRINTF("ID: %d, Saving Tweet(following id)\n",TOS_NODE_ID);
         } else PRINTF("ID: %d, Not interested\n",TOS_NODE_ID);
         PRINTFFLUSH();
