@@ -9,7 +9,6 @@
  */
 #ifndef TINY_BLOG_H
 #define  TINY_BLOG_H
-
 /* This number is arbitrary */
 enum {
   AM_TINYBLOGMSG = 10
@@ -20,7 +19,7 @@ enum {
    See $TOSROOT/tos/types/message.h
  */
 enum {
-  DATA_SIZE = 14
+  DATA_SIZE = 100
 };
 
 typedef nx_struct TinyBlogMsg {

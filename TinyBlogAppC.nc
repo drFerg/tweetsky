@@ -13,13 +13,13 @@ implementation
     #endif
 
         components new TimerMilliC(), 
-        new TimerMilliC() as MTimer,
+        new TimerMilliC() as MoodTimer,
         new TimerMilliC() as LEDTimer0,
         new TimerMilliC() as LEDTimer1,
         new TimerMilliC() as LEDTimer2,
         #if TELOS
-        new HamamatsuS10871TsrC() as LSensor,
-        new SensirionSht11C().Temperature as TSensor,
+        new HamamatsuS10871TsrC() as LightSensor,
+        new SensirionSht11C().Temperature as TempSensor,
         #else
         new DemoSensorC() as LSensor,
         new DemoSensorC() as TSensor,
@@ -33,12 +33,12 @@ implementation
     TinyBlogC.AMSend -> AMSenderC;
     TinyBlogC.Receive -> AMReceiverC;
     TinyBlogC.Timer -> TimerMilliC;
-    TinyBlogC.MoodTimer -> MTimer;
+    TinyBlogC.MoodTimer -> MoodTimer;
     TinyBlogC.LEDTimer0 -> LEDTimer0;
     TinyBlogC.LEDTimer1 -> LEDTimer1;
     TinyBlogC.LEDTimer2 -> LEDTimer2;
-    TinyBlogC.LightSensor -> LSensor;
-    TinyBlogC.TempSensor -> TSensor;
+    TinyBlogC.LightSensor -> LightSensor;
+    TinyBlogC.TempSensor -> TempSensor;
     TinyBlogC.Leds -> LedsC;
     TinyBlogC.TweetQueue -> TweetQueueC;
     TinyBlogC.PktBuffer -> PktBufferC;

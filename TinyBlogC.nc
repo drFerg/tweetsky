@@ -386,20 +386,21 @@ implementation
         id = call InterestCache.getSender(tweet->destMoteID);
         if (id > 0)
                 tweet->sourceMoteID = id;
-        if (fromBase || !tweet_seen(tweet)){
     /* Process tweet as it's new! */
         
-            switch(tweet->action){
-                case POST_TWEET: (fromBase?save_tweet(tweet):process_tweet_event(tweet));return msg;break;
-                case GET_TWEETS: (fromBase?send_interest(TRUE):process_interest(tweet));break;
-                case ADD_USER  : add_user_to_follow(tweet->data[0]); return msg;
-                default:break;
-            }
+        switch(tweet->action){
+            case POST_TWEET: (fromBase?save_tweet(tweet):process_tweet_event(tweet));return msg;break;
+            case GET_TWEETS: 
+                if (fromBase){
+                    send_interest(TRUE);
+                }else if (!tweet_seen(tweet)){
+                    process_interest(tweet);
+                }else report_dropped();
+                break;
+            case ADD_USER  : add_user_to_follow(tweet->data[0]); return msg;
+            default:break;
         }
-        else {
-            report_dropped();
-            return msg;
-        }
+
 #endif
     
         
