@@ -7,7 +7,7 @@
 public class TinyBlogMsg extends net.tinyos.message.Message {
 
     /** The default size of this message type in bytes. */
-    public static final int DEFAULT_MESSAGE_SIZE = 62;
+    public static final int DEFAULT_MESSAGE_SIZE = 100;
 
     /** The Active Message type associated with this message. */
     public static final int AM_TYPE = 10;

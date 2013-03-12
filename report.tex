@@ -138,14 +138,54 @@ The implemented version, Counter Mode Encryption (CTR), only supports encryption
 
 
 \section{Testing \& Evaluation}
+\subsection{Scenario 1}
+For testing scenario 1, three TelosB motes were used, one as a base station and two as user motes. Both motes used the same base station to talk to the host-side application. The follow section shows a step by step view of sending a receiving tweets.
+
+Figure \ref{fig:tweeting} shows the user connecting to a specific mote, adding a new user to their follow list, and then for demonstrational purposes connecting to the followed mote and tweeting from it.
+\begin{figure}[htb!]
+\centering
+\includegraphics[scale=.6]{img/tweet.jpg}
+\caption{Connecting to a user mote, following a user and sending a tweet}
+\label{fig:tweeting}
+\end{figure}
+
+Because mote 1 followed mote 3, as soon as a tweet is received on mote 1 whose user exists in the follow list, the tweet is forwarded to the base station to be displayed by the host-side application, as shown in figure \ref{fig:receive}.
+\begin{figure}[htb!]
+\centering
+\includegraphics[scale=.7]{img/receive.jpg}
+\caption{Receiving a tweet from a followed user}
+\label{fig:receive}
+\end{figure}
+
+\newpage
+As one of the requirements implementing long tweets (\textless101 chars) is necessary and as show in figure \ref{fig:long} it works.
+\begin{figure}[htb!]
+\centering
+\includegraphics[scale=.50]{img/long.jpg}
+\caption{Sending a long tweet}
+\label{fig:long}
+\end{figure}
 
 
+Lastly the ability to a later time retrieve all followed tweets is necessary, so when the user types: \textit{get} into the host-side application the user's mote returns all messages the follow motes have tweeted, shown in figure \ref{fig:get}.
+\begin{figure}[htb!]
+\centering
+\includegraphics[scale=.6]{img/get.jpg}
+\caption{Fetching tweets for users followed}
+\label{fig:get}
+\end{figure}
+
+
+
+
+
+\newpage
 \section{Appendices}
 \begin{figure}[htb!]
 \centering
 \includegraphics[scale=.27,angle=90]{TinyBlogAppC.png}
-\label{fig:fullWiring}
 \caption{TinyBlog wiring, created using nesdoc}
+\label{fig:fullWiring}
 \end{figure}
 
 

@@ -16,13 +16,13 @@ implementation
         new TimerMilliC() as MoodTimer,
         new TimerMilliC() as LEDTimer0,
         new TimerMilliC() as LEDTimer1,
-        new TimerMilliC() as LEDTimer2,
+        new TimerMilliC() as LEDTimer2;
 /* Sensors */
         #if TELOS
-        new HamamatsuS10871TsrC() as LightSensor,
-        new SensirionSht11C().Temperature as TempSensor;
+        components new HamamatsuS10871TsrC() as LightSensor,
+        new SensirionSht11C() as TempSensor;
         #else
-        new DemoSensorC() as LightSensor,
+        components new DemoSensorC() as LightSensor,
         new DemoSensorC() as TempSensor;
         #endif
 /* Radio/Security */
@@ -49,7 +49,11 @@ implementation
     TinyBlogC.LEDTimer1 -> LEDTimer1;
     TinyBlogC.LEDTimer2 -> LEDTimer2;
     TinyBlogC.LightSensor -> LightSensor;
+    #if TELOS
+    TinyBlogC.TempSensor -> TempSensor.Temperature;
+    #else 
     TinyBlogC.TempSensor -> TempSensor;
+    #endif
     TinyBlogC.Leds -> LedsC;
     TinyBlogC.TweetQueue -> TweetQueueC;
     TinyBlogC.PktBuffer -> PktBufferC;

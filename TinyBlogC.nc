@@ -12,7 +12,10 @@
 #include "printf.h"
 #define PRINTF(...) printf(__VA_ARGS__)
 #define PRINTFFLUSH(...) printfflush()
-#else
+#elif SIM
+#define PRINTF(...) dbg("DEBUG",__VA_ARGS__)
+#define PRINTFFLUSH(...)
+#else  
 #define PRINTF(...)
 #define PRINTFFLUSH(...)
 #endif
@@ -50,7 +53,7 @@ implementation
 
     bool sendBusy = FALSE;
     bool moreTweets = FALSE;
-    #ifdef SCEN==2
+    #if SCEN==2
     bool moreFollowees = FALSE;
     #endif
     #if SECURE
@@ -86,8 +89,8 @@ implementation
     void report_post_tweet(){PRINTF("ID: %d, Posted tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_green_led(500);}
     void report_fetch_tweet(){PRINTF("ID: %d, Fetched tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_blue_led(500);}
 
-    void report_problem() { pulse_red_led(1000);pulse_blue_led(1000);pulse_green_led(1000); }
-    void report_sent() {pulse_green_led(100);}
+    void report_problem() { PRINTF("ID: %d, Problem\n",TOS_NODE_ID);pulse_red_led(1000);pulse_blue_led(1000);pulse_green_led(1000); }
+    void report_sent() {PRINTF("ID: %d, Sent tweet\n",TOS_NODE_ID);pulse_green_led(100);}
     void report_received() {PRINTF("ID: %d, Received tweet\n",TOS_NODE_ID);PRINTFFLUSH();pulse_red_led(100);pulse_blue_led(100);}
     void report_dropped(){PRINTF("ID: %d, Dropped tweet\n----------\n",TOS_NODE_ID);PRINTFFLUSH();pulse_red_led(1000);}
       
@@ -118,7 +121,7 @@ implementation
             PRINTF("ID: %d, Tweet could no be sent, channel busy\n", TOS_NODE_ID);
         }
         add_to_seen(tbmsg);
-        PRINTF("ID: %d, Tweet sent to: %d from: %d\n",TOS_NODE_ID, dest, tbmsg->sourceMoteID);PRINTFFLUSH();
+        PRINTF("ID: %d, Tweet sent to: %d\n",TOS_NODE_ID, dest);PRINTFFLUSH();
     }
 /*----------------Timers----------------------------*/
     void startTimer(){
@@ -130,7 +133,6 @@ implementation
 
 /*------------Helper function-------------------------------*/
     void add_user_to_follow(int user){
-        //CHANGE TO DATA FIELD using bit manips
         call FollowList.push(user);
         PRINTF("Added user: %d\n", user);
         PRINTFFLUSH();
@@ -194,7 +196,7 @@ implementation
     }
 
 #if SCEN==1
-    void copy_tweet_from_store_to_local(){
+    bool copy_tweet_from_store_to_local(){
         Tweet *tweet;
         if (call TweetQueue.has_tweets()){
             tweet = call TweetQueue.pop_tweet(); /* Send tweet to base station */
@@ -204,16 +206,18 @@ implementation
             local.nchars = tweet->nchars;
             local.mood = tweet->mood;
             memcpy((char *)&(local.data), tweet->msg, tweet->nchars);
+            return TRUE;
         }
+        return FALSE;
     }
     void send_tweets_to_base(){
-        copy_tweet_from_store_to_local();
-        local.destMoteID = BASE;
-        local.action = RETURN_TWEETS;
-        send(&local, BASE);
-        PRINTF("Forwarding to base\n");
-        PRINTFFLUSH();
-
+        if (copy_tweet_from_store_to_local()){
+            local.destMoteID = BASE;
+            local.action = RETURN_TWEETS;
+            send(&local, BASE);
+            PRINTF("Forwarding to base\n");
+            PRINTFFLUSH();
+        }
         if (call TweetQueue.has_tweets())
             moreTweets = TRUE;
          else 
@@ -247,7 +251,7 @@ implementation
 
 #if SCEN == 2
     void save_tweet(tinyblog_t *tbmsg){
-        PRINTF("SAVED TWEET\n");
+        //PRINTF("SAVED TWEET\n");
         PRINTFFLUSH();
         tbmsg->sourceMoteID = TOS_NODE_ID;
         call TweetQueue.add_tweet(tbmsg);
@@ -346,18 +350,18 @@ implementation
 /***********EVENTS********************************************/
     event void Boot.booted() {
         if (call RadioControl.start() != SUCCESS) report_problem();
-        local.seqno = 0;
+        local.seqno = 1;
         PRINTF("*********************\n****** BOOTED *******\n*********************\n");
         PRINTFFLUSH();
-        
+
 
     }
 /*-----------Radio & AM EVENTS------------------------------- */
     event void RadioControl.startDone(error_t error) {
         startMoodTimer();
-    #if SCEN==2
-        //startTimer();
-    #endif
+
+        startTimer();
+
     #if SECURE
         call CC2420Keys.setKey(1, key);
     #endif
@@ -459,6 +463,7 @@ implementation
     }
 
     event void Timer.fired() {
+#if SIM
 #if SCEN==1
         if (!sendBusy){
             tinyblog_t * tweet = (tinyblog_t *) (call AMSend.getPayload(&am_pkt, sizeof(tinyblog_t)));
@@ -480,7 +485,6 @@ implementation
 
         if (!sendBusy)
             report_problem();
-        send_tweets_to_base();
 #elif SCEN==2
 
         local.sourceMoteID = TOS_NODE_ID;
@@ -497,10 +501,11 @@ implementation
             local.sourceMoteID = TOS_NODE_ID;
             local.destMoteID = 8;
             local.action = GET_TWEETS;
-            send(&local, AM_BROADCAST_ADDR);
+            send(&local, 1);
         }
 
 
+#endif
 #endif
     }
 /*-----------Mood Timer EVENT------------------------------- */    
