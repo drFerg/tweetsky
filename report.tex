@@ -1,6 +1,11 @@
 \documentclass{article}
 \usepackage{fullpage}
 \usepackage{graphicx}
+\usepackage{caption}
+
+\captionsetup{font=scriptsize,labelfont=scriptsize}
+
+
 \author{Fergus W. Leahy - 0908622L}
 
 \title{Wireless Sensor Networks Assessed Coursework 2}
@@ -141,12 +146,26 @@ The implemented version, Counter Mode Encryption (CTR), only supports encryption
 \subsection{Scenario 1}
 For testing scenario 1, three TelosB motes were used, one as a base station and two as user motes. Both motes used the same base station to talk to the host-side application. The follow section shows a step by step view of sending a receiving tweets.
 
-Figure \ref{fig:tweeting} shows the user connecting to a specific mote, adding a new user to their follow list, and then for demonstrational purposes connecting to the followed mote and tweeting from it.
+Figure \ref{fig:tweeting} shows the user connecting to a specific mote, adding a new user to their follow list, and then for demonstrational purposes connecting to the followed mote and tweeting from it. In figure \ref{fig:motetweeting} the users mote shows how it reacts to incoming tweet messages and recognises the different actions it needs to perform, where 0 is the base station, 1 and 3 are the user motes, and -1 is everyone on the network.
 \begin{figure}[htb!]
-\centering
-\includegraphics[scale=.6]{img/tweet.jpg}
-\caption{Connecting to a user mote, following a user and sending a tweet}
-\label{fig:tweeting}
+
+\begin{minipage}{.5\textwidth}
+\begin{center}
+    \includegraphics[scale=.6]{img/tweet.jpg}
+    \centering
+	\captionof{figure}{Connecting to a user mote, following a user and sending a tweet}
+	\label{fig:tweeting}
+	\end{center}
+    \end{minipage}%
+    \begin{minipage}{.5\textwidth}
+    \begin{center}
+    \includegraphics[scale=.5]{img/motetweet.jpg}
+    \captionof{figure}{Mote side application \\receiving commands}
+    \label{fig:motetweeting}
+\end{center}
+
+\end{minipage}
+
 \end{figure}
 
 Because mote 1 followed mote 3, as soon as a tweet is received on mote 1 whose user exists in the follow list, the tweet is forwarded to the base station to be displayed by the host-side application, as shown in figure \ref{fig:receive}.
@@ -176,7 +195,7 @@ Lastly the ability to a later time retrieve all followed tweets is necessary, so
 \end{figure}
 
 
-
+\subsection{Scenario 2}
 
 
 \newpage

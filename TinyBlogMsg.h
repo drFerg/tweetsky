@@ -11,7 +11,8 @@
 #define  TINY_BLOG_H
 /* This number is arbitrary */
 enum {
-  AM_TINYBLOGMSG = 10
+  AM_TINYBLOGMSG = 10,
+  DEFAULT_MESSAGE_SIZE = 114
 };
 
 /* Number of bytes per message. If you increase this, you will have to increase the message_t size,

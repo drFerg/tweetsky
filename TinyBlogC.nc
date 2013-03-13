@@ -103,7 +103,6 @@ implementation
     }
 
     void add_to_seen(tinyblog_t *tbmsg){
-        PRINTF("ID: %d, adding to blklist\n",TOS_NODE_ID);
         call PktBuffer.push(tbmsg);
     }
 

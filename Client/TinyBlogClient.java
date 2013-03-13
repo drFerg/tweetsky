@@ -82,6 +82,7 @@ public class TinyBlogClient implements MessageListener
         System.out.printf("Node %d: Following user ID: %d\n", MOTEID, user);
         TinyBlogMsg msg = new TinyBlogMsg();
         msg.set_action(ADD_USER);
+        msg.set_destMoteID(MOTEID);
         msg.set_data(data);
         sendMsg(msg);
     }
@@ -90,6 +91,7 @@ public class TinyBlogClient implements MessageListener
         System.out.printf("Node %d: Getting tweets...\n",MOTEID);
         TinyBlogMsg msg = new TinyBlogMsg();
         msg.set_action(GET_TWEETS);
+        msg.set_destMoteID(MOTEID);
         msg.set_nchars((short)0);
         sendMsg(msg);
     }
