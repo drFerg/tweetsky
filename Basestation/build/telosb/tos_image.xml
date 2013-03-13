@@ -1,11 +1,11 @@
 <tos_image>
   <ident>
-    <uidhash>D616232FL</uidhash>
+    <uidhash>C708CA1BL</uidhash>
     <hostname>fergul-ubuntu</hostname>
     <username>fergul</username>
     <appname>BaseStationC</appname>
     <userhash>DF26CCF4L</userhash>
-    <timestamp>513F868CL</timestamp>
+    <timestamp>514093CDL</timestamp>
     <deluge_support>no</deluge_support>
     <platform>telosb</platform>
   </ident>

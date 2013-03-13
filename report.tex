@@ -142,11 +142,11 @@ Encryption of tweets has been enabled as a compile time option, -DSECURE \& -DCC
 The implemented version, Counter Mode Encryption (CTR), only supports encryption of the data, but modifying the implementation to use both encryption and authentication would be relatively straight forward by using Counter with Cipher Block Chaining Authentication Code (CCM) instead. By doing so it would allow the motes to ensure that the data being transmitted is secure and that it is from who it says it's from. 
 
 
-\section{Testing \& Evaluation}
+\section{Demonstration}
 \subsection{Scenario 1}
 For testing scenario 1, three TelosB motes were used, one as a base station and two as user motes. Both motes used the same base station to talk to the host-side application. The follow section shows a step by step view of sending a receiving tweets.
 
-Figure \ref{fig:tweeting} shows the user connecting to a specific mote, adding a new user to their follow list, and then for demonstrational purposes connecting to the followed mote and tweeting from it. In figure \ref{fig:motetweeting} the users mote shows how it reacts to incoming tweet messages and recognises the different actions it needs to perform, where 0 is the base station, 1 and 3 are the user motes, and -1 is everyone on the network.
+Figure \ref{fig:tweeting} shows the user connecting to a specific mote, adding a new user to their follow list, and then for demonstrational purposes connecting to the followed mote and tweeting from it. In figure \ref{fig:motetweeting} the users mote shows how it reacts to incoming tweet messages and recognises the different actions it needs to perform, where 0 is the base station, 1 and 3 are the user motes, and -1 is everyone on the network. As shown, it not only forwards the tweet to the base station but also forwards it to the rest of the network
 \begin{figure}[htb!]
 
 \begin{minipage}{.5\textwidth}
@@ -206,6 +206,28 @@ Lastly the ability to a later time retrieve all followed tweets is necessary, so
 \caption{TinyBlog wiring, created using nesdoc}
 \label{fig:fullWiring}
 \end{figure}
+
+\section{Testing}
+In order to ensure that the system meets the previously mentioned requirements, rigorous testing of both the individual components and the overall system needs to be considered and carried out.
+
+For testing the functionality of individual components, such as the Follow list, unit testing can be used to test the expected outputs from any given inputs. This should be applied to important components and functions in the system such as the forwarding and storage mechanics which form the core of the TinyBlog system.
+The following unit tests have been defined:
+\begin{itemize}
+	\item Forwarder mechanism (Scenario 1)
+	\begin{itemize}
+		\item Ensure packets which are unseen \& with valid ttl are forwarded.
+		\item Ensure packets which are seen \& with a valid ttl are dropped.
+		\item Ensure packets which are unseen \& with an expired ttl are dropped.
+		\item Ensure packets which are seen \& with an expired ttl are dropped. 
+	\end{itemize}
+	\item Tweet Queue (Tweet store)
+	\begin{itemize}
+		\item Ensure that when tweets stored can be retrieved.
+		\item Ensure that when tweets are retrieved(popped) that they are then removed from the store.
+		\item Ensure that when new tweets are added and the store is full, the oldest tweet is overwritten.
+	\end{itemize}
+	\item 
+\end{itemize}
 
 
 

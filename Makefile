@@ -1,5 +1,6 @@
 CFLAGS += -I$(TOSDIR)/lib/printf 
-CFLAGS += -DTOSH_DATA_LENGTH=114 -DSCEN=1 
+CFLAGS += -DTOSH_DATA_LENGTH=114 
+CFLAGS +=-DSCEN=1 
 CFLAGS += -DDEBUG -DTELOS
 #CFLAGS += -DSIM
 # For security uncomment line below, though bug exists

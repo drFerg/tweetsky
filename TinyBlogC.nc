@@ -190,7 +190,7 @@ implementation
     void send_my_tweet(tinyblog_t *tbmsg){
         //ADD SENSOR READING
         tbmsg->sourceMoteID = TOS_NODE_ID;
-        tbmsg->destMoteID = 0;
+        tbmsg->destMoteID = AM_BROADCAST_ADDR;
         getMood(tbmsg);
     }
 

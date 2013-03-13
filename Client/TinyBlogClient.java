@@ -61,16 +61,19 @@ public class TinyBlogClient implements MessageListener
     }
 
     short[] convertStringToShort(String s){
-        short [] text = new short[s.length()];
-        for (int i = 0; i < s.length(); i++){
+        short [] text = new short[s.length()+1];
+        int i = 0;
+        for (; i < s.length(); i++){
             text[i] = (new Integer(s.charAt(i))).shortValue();
         }
+        text[i] = 4;
         return text;
     }
 
     String convertShortToString(short[] s, short len){
         String text = "";
         for (short i = 0; i < len; i++){
+            if (s[i] == 4)continue;
             text += (char)s[i];
         }
         return text;
